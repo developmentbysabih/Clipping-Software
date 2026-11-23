@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.env
+.venv/
+venv/
+
+# Storage & media caches
+storage/raw_videos/*
+!storage/raw_videos/.gitkeep
+storage/transcripts/*
+!storage/transcripts/.gitkeep
+storage/subtitles/*
+!storage/subtitles/.gitkeep
+storage/output_clips/*
+!storage/output_clips/.gitkeep
+storage/temp/*
+!storage/temp/.gitkeep
+storage/jobs/*
+!storage/jobs/.gitkeep
+storage/uploads/*
+!storage/uploads/.gitkeep
+
+# IDE & OS
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
