@@ -110,6 +110,7 @@ const elements = {
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   if (window.lucide) {
     lucide.createIcons();
   }
@@ -118,7 +119,93 @@ document.addEventListener('DOMContentLoaded', () => {
   initSSE();
   checkActiveJobs();
   loadGallery();
+  updateLiveMockup();
 });
+
+// Theme Management (Light / Dark)
+function initTheme() {
+  const saved = localStorage.getItem('autoclip_theme') || 'dark';
+  setTheme(saved);
+
+  const toggleBtn = document.getElementById('theme-toggle-btn');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      const isLight = document.documentElement.classList.contains('light');
+      setTheme(isLight ? 'dark' : 'light');
+    });
+  }
+}
+
+function setTheme(theme) {
+  const sun = document.getElementById('theme-icon-sun');
+  const moon = document.getElementById('theme-icon-moon');
+  const text = document.getElementById('theme-text');
+
+  if (theme === 'light') {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.add('light');
+    if (sun) sun.classList.remove('hidden');
+    if (moon) moon.classList.add('hidden');
+    if (text) text.textContent = 'Light';
+  } else {
+    document.documentElement.classList.remove('light');
+    document.documentElement.classList.add('dark');
+    if (sun) sun.classList.add('hidden');
+    if (moon) moon.classList.remove('hidden');
+    if (text) text.textContent = 'Dark';
+  }
+  localStorage.setItem('autoclip_theme', theme);
+  if (window.lucide) lucide.createIcons();
+}
+
+// Live Interactive Phone Mockup Synchronizer
+function updateLiveMockup() {
+  const phoneContainer = document.getElementById('phone-container');
+  const videoFg = document.getElementById('mockup-video-fg');
+  const watermarkDisplay = document.getElementById('mockup-watermark-display');
+  const progressWrap = document.getElementById('mockup-progress-wrap');
+  const progressLine = document.getElementById('mockup-progress-line');
+
+  if (!phoneContainer) return;
+
+  // Aspect Ratio Dimensions
+  if (state.aspectRatio === '9:16') {
+    phoneContainer.style.width = '240px';
+    phoneContainer.style.height = '426px';
+  } else if (state.aspectRatio === '1:1') {
+    phoneContainer.style.width = '290px';
+    phoneContainer.style.height = '290px';
+  } else if (state.aspectRatio === '4:5') {
+    phoneContainer.style.width = '260px';
+    phoneContainer.style.height = '325px';
+  } else if (state.aspectRatio === '16:9') {
+    phoneContainer.style.width = '380px';
+    phoneContainer.style.height = '214px';
+  }
+
+  // Zoom & Mirror transform
+  const zoom = elements.rangeZoom ? parseFloat(elements.rangeZoom.value) || 1.0 : 1.0;
+  const isMirror = elements.checkHflip && elements.checkHflip.checked;
+  if (videoFg) {
+    videoFg.style.transform = `translateY(-50%) scale(${zoom}) scaleX(${isMirror ? -1 : 1})`;
+  }
+
+  // Watermark
+  const wmText = elements.inputWatermark ? elements.inputWatermark.value.trim() : '';
+  if (watermarkDisplay) {
+    watermarkDisplay.textContent = wmText || '';
+    watermarkDisplay.style.display = wmText ? 'inline-block' : 'none';
+  }
+
+  // Progress Bar
+  const showProgress = elements.checkProgressBar ? elements.checkProgressBar.checked : true;
+  if (progressWrap) {
+    progressWrap.style.display = showProgress ? 'block' : 'none';
+  }
+  if (progressLine) {
+    progressLine.style.backgroundColor = state.progressBarColor || '#EC4899';
+  }
+}
 
 // Fetch system info
 async function initSystemStatus() {
@@ -263,6 +350,7 @@ function initEventListeners() {
         '16:9': '16:9 (1920x1080)',
       };
       elements.labelSelectedRatio.textContent = dimMap[ratio] || ratio;
+      updateLiveMockup();
     });
   });
 
@@ -276,6 +364,7 @@ function initEventListeners() {
           b.className = b.className.replace(/ring-2 ring-white ring-offset-1 ring-offset-slate-900/g, '').trim();
         });
         e.currentTarget.className += ' ring-2 ring-white ring-offset-1 ring-offset-slate-900';
+        updateLiveMockup();
       });
     });
   }
@@ -332,15 +421,94 @@ function initEventListeners() {
   });
   elements.rangeZoom.addEventListener('input', (e) => {
     elements.valZoom.textContent = `${parseFloat(e.target.value).toFixed(2)}x`;
+    updateLiveMockup();
   });
   elements.rangeSat.addEventListener('input', (e) => {
     elements.valSat.textContent = `${parseFloat(e.target.value).toFixed(2)}x`;
   });
 
+  // Toggles & Watermark Live Preview
+  if (elements.inputWatermark) {
+    elements.inputWatermark.addEventListener('input', updateLiveMockup);
+  }
+  if (elements.checkProgressBar) {
+    elements.checkProgressBar.addEventListener('change', updateLiveMockup);
+  }
+  if (elements.checkHflip) {
+    elements.checkHflip.addEventListener('change', updateLiveMockup);
+  }
+
+  // Paste from clipboard buttons
+  const btnPasteUrl = document.getElementById('btn-paste-url');
+  if (btnPasteUrl && elements.inputUrl) {
+    btnPasteUrl.addEventListener('click', async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          elements.inputUrl.value = text.trim();
+          showToast('Pasted YouTube link from clipboard', 'clipboard');
+        }
+      } catch {
+        showToast('Clipboard access denied, paste manually', 'alert-circle');
+      }
+    });
+  }
+
+  const btnPasteLiveUrl = document.getElementById('btn-paste-live-url');
+  if (btnPasteLiveUrl && elements.inputLiveUrl) {
+    btnPasteLiveUrl.addEventListener('click', async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          elements.inputLiveUrl.value = text.trim();
+          showToast('Pasted Live Stream link from clipboard', 'clipboard');
+        }
+      } catch {
+        showToast('Clipboard access denied, paste manually', 'alert-circle');
+      }
+    });
+  }
+
   // Action Buttons
   elements.btnStartProcess.addEventListener('click', startPipeline);
   elements.btnBatchRender.addEventListener('click', batchRenderAll);
   elements.btnRefreshGallery.addEventListener('click', loadGallery);
+
+  // Open Output Folder Button
+  const btnOpenFolder = document.getElementById('btn-open-folder');
+  if (btnOpenFolder) {
+    btnOpenFolder.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/open-folder', { method: 'POST' });
+        if (res.ok) {
+          showToast('Opened output folder in File Explorer', 'folder');
+        } else {
+          showToast('Folder: storage/output_clips', 'folder');
+        }
+      } catch (e) {
+        showToast('Folder: storage/output_clips', 'folder');
+      }
+    });
+  }
+
+  // Video Modal Close Handler
+  const modal = document.getElementById('video-modal');
+  const btnCloseModal = document.getElementById('btn-close-modal');
+  const modalPlayer = document.getElementById('modal-player');
+  if (btnCloseModal && modal && modalPlayer) {
+    btnCloseModal.addEventListener('click', () => {
+      modalPlayer.pause();
+      modalPlayer.src = '';
+      modal.classList.add('hidden');
+    });
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modalPlayer.pause();
+        modalPlayer.src = '';
+        modal.classList.add('hidden');
+      }
+    });
+  }
 
   // Transcript Search
   elements.inputSearchTranscript.addEventListener('input', (e) => {
@@ -640,52 +808,52 @@ function renderCandidateClips(clips, jobId) {
               <i data-lucide="${scoreIcon}" class="w-3.5 h-3.5"></i>
               ${score}/100 Retention
             </span>
-            <span class="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-[10px] text-slate-300 font-medium">
+            <span class="px-2 py-0.5 rounded-md bg-card-inner border border-card text-[10px] text-secondary font-medium">
               ${hookType}
             </span>
           </div>
-          <span class="text-xs text-slate-400 font-mono-numbers bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+          <span class="text-xs text-muted font-mono-numbers bg-card-inner px-2 py-0.5 rounded border border-card">
             ${clip.start_time.toFixed(1)}s - ${clip.end_time.toFixed(1)}s (${duration}s)
           </span>
         </div>
 
         <!-- Title -->
-        <h3 class="text-base font-bold text-white tracking-tight">${clip.title}</h3>
+        <h3 class="text-base font-bold text-primary tracking-tight">${clip.title}</h3>
 
         <!-- Verbatim Hook Quote Pill -->
         ${clip.hook_sentence ? `
-          <div class="p-3 bg-slate-950/80 rounded-xl border border-white/[0.06] text-xs text-slate-300 italic flex items-start gap-2">
-            <i data-lucide="quote" class="w-3.5 h-3.5 text-pink-400 shrink-0 mt-0.5"></i>
+          <div class="p-3 bg-card-inner rounded-xl border border-card text-xs text-secondary italic flex items-start gap-2">
+            <i data-lucide="quote" class="w-3.5 h-3.5 text-pink-500 shrink-0 mt-0.5"></i>
             <span>"${clip.hook_sentence}"</span>
           </div>
         ` : ''}
 
         <!-- AI Viral Reasoning -->
-        <p class="text-xs text-slate-400 leading-relaxed">${clip.reasoning || 'Selected for maximum viewer watch-time retention.'}</p>
+        <p class="text-xs text-muted leading-relaxed">${clip.reasoning || 'Selected for maximum viewer watch-time retention.'}</p>
         
         <!-- Social Caption Snippet -->
-        <div class="p-2.5 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1.5">
-          <div class="flex items-center justify-between text-[10px] text-slate-400">
-            <span class="font-semibold text-slate-300 flex items-center gap-1">
-              <i data-lucide="share-2" class="w-3 h-3 text-cyan-400"></i> Social Caption & Hashtags
+        <div class="p-2.5 bg-card-inner rounded-xl border border-card space-y-1.5">
+          <div class="flex items-center justify-between text-[10px] text-muted">
+            <span class="font-semibold text-secondary flex items-center gap-1">
+              <i data-lucide="share-2" class="w-3 h-3 text-cyan-500"></i> Social Caption & Hashtags
             </span>
-            <button class="btn-copy-caption text-pink-400 hover:text-pink-300 font-semibold cursor-pointer">
+            <button class="btn-copy-caption text-pink-500 hover:text-pink-400 font-semibold cursor-pointer">
               Copy Caption
             </button>
           </div>
-          <p class="text-[11px] text-slate-400 line-clamp-2">${captionIdea}</p>
+          <p class="text-[11px] text-muted line-clamp-2">${captionIdea}</p>
         </div>
       </div>
 
       <!-- Card Action Footer -->
-      <div class="pt-3 border-t border-white/[0.06] flex items-center justify-between gap-2">
-        <select class="clip-sub-preset bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200">
+      <div class="pt-3 border-t border-card flex items-center justify-between gap-2">
+        <select class="clip-sub-preset rounded-lg px-2 py-1 text-xs text-primary">
           <option value="hormozi" ${state.selectedPreset === 'hormozi' ? 'selected' : ''}>Hormozi</option>
           <option value="beast" ${state.selectedPreset === 'beast' ? 'selected' : ''}>Beast</option>
           <option value="tiktok_bounce" ${state.selectedPreset === 'tiktok_bounce' ? 'selected' : ''}>TikTok Pop</option>
           <option value="cyberpunk" ${state.selectedPreset === 'cyberpunk' ? 'selected' : ''}>Cyberpunk</option>
           <option value="luxury" ${state.selectedPreset === 'luxury' ? 'selected' : ''}>Luxury</option>
-          <option value="minimal" ${state.selectedPreset === 'minimal' ? 'selected' : ''}>Minimal</option>
+          <option value="clean_minimal" ${state.selectedPreset === 'clean_minimal' ? 'selected' : ''}>Minimal</option>
         </select>
 
         <button class="btn-render-single flex-1 py-1.5 px-3 bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold rounded-lg shadow-md shadow-pink-600/25 flex items-center justify-center space-x-1.5 transition cursor-pointer">
@@ -824,21 +992,36 @@ async function loadGallery() {
 
           <!-- Metadata -->
           <div class="space-y-1">
-            <h4 class="text-sm font-bold text-white tracking-tight truncate" title="${clip.title}">${clip.title}</h4>
-            <div class="flex items-center justify-between text-[11px] text-slate-400">
-              <span>Preset: <strong class="text-slate-200 capitalize">${presetName}</strong></span>
-              <span class="text-emerald-400 font-semibold font-mono-numbers">9:16 1080p</span>
+            <h4 class="text-sm font-bold text-primary tracking-tight truncate" title="${clip.title}">${clip.title}</h4>
+            <div class="flex items-center justify-between text-[11px] text-muted">
+              <span>Preset: <strong class="text-secondary capitalize">${presetName}</strong></span>
+              <span class="text-emerald-500 font-semibold font-mono-numbers">9:16 1080p</span>
             </div>
           </div>
         </div>
 
         <!-- Download Action Button -->
         <a href="${clip.url}" download="${clip.title}.mp4" 
-          class="w-full py-2 px-3 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl border border-slate-700 flex items-center justify-center space-x-1.5 transition">
-          <i data-lucide="download" class="w-3.5 h-3.5 text-pink-400"></i>
+          class="w-full py-2 px-3 bg-card-inner hover:bg-card-hover text-primary text-xs font-semibold rounded-xl border border-card flex items-center justify-center space-x-1.5 transition">
+          <i data-lucide="download" class="w-3.5 h-3.5 text-pink-500"></i>
           <span>Download 9:16 Video</span>
         </a>
       `;
+
+      // Allow clicking thumbnail/video to open full-screen modal
+      const videoEl = card.querySelector('video');
+      if (videoEl) {
+        videoEl.addEventListener('click', (e) => {
+          e.preventDefault();
+          const modal = document.getElementById('video-modal');
+          const modalPlayer = document.getElementById('modal-player');
+          if (modal && modalPlayer) {
+            modalPlayer.src = clip.url;
+            modal.classList.remove('hidden');
+            modalPlayer.play();
+          }
+        });
+      }
 
       elements.galleryGrid.appendChild(card);
     });
