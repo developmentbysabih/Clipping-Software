@@ -110,7 +110,6 @@ const elements = {
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
-  initTheme();
   if (window.lucide) {
     lucide.createIcons();
   }
@@ -120,42 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
   checkActiveJobs();
   loadGallery();
 });
-
-// Theme Management
-function initTheme() {
-  const savedTheme = localStorage.getItem('autoclip_theme') || 'dark';
-  setTheme(savedTheme);
-
-  const toggleBtn = document.getElementById('theme-toggle-btn');
-  if (toggleBtn) {
-    toggleBtn.addEventListener('click', () => {
-      const current = document.documentElement.classList.contains('light') ? 'light' : 'dark';
-      setTheme(current === 'dark' ? 'light' : 'dark');
-    });
-  }
-}
-
-function setTheme(theme) {
-  const sun = document.getElementById('theme-icon-sun');
-  const moon = document.getElementById('theme-icon-moon');
-  const text = document.getElementById('theme-text');
-
-  if (theme === 'light') {
-    document.documentElement.classList.remove('dark');
-    document.documentElement.classList.add('light');
-    if (sun) sun.classList.remove('hidden');
-    if (moon) moon.classList.add('hidden');
-    if (text) text.textContent = 'Light';
-  } else {
-    document.documentElement.classList.remove('light');
-    document.documentElement.classList.add('dark');
-    if (sun) sun.classList.add('hidden');
-    if (moon) moon.classList.remove('hidden');
-    if (text) text.textContent = 'Dark';
-  }
-  localStorage.setItem('autoclip_theme', theme);
-  if (window.lucide) lucide.createIcons();
-}
 
 // Fetch system info
 async function initSystemStatus() {
@@ -378,22 +341,6 @@ function initEventListeners() {
   elements.btnStartProcess.addEventListener('click', startPipeline);
   elements.btnBatchRender.addEventListener('click', batchRenderAll);
   elements.btnRefreshGallery.addEventListener('click', loadGallery);
-
-  const btnOpenFolder = document.getElementById('btn-open-folder');
-  if (btnOpenFolder) {
-    btnOpenFolder.addEventListener('click', async () => {
-      try {
-        const res = await fetch('/api/open-folder', { method: 'POST' });
-        if (res.ok) {
-          showToast('Opened output folder in File Explorer', 'folder');
-        } else {
-          showToast('Folder: storage/output_clips', 'folder');
-        }
-      } catch (e) {
-        showToast('Folder: storage/output_clips', 'folder');
-      }
-    });
-  }
 
   // Transcript Search
   elements.inputSearchTranscript.addEventListener('input', (e) => {

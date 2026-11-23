@@ -409,7 +409,12 @@ async def serve_index():
     index_file = STATIC_DIR / "index.html"
     if index_file.exists():
         with open(index_file, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
+            content = f.read()
+            resp = HTMLResponse(content=content)
+            resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            resp.headers["Pragma"] = "no-cache"
+            resp.headers["Expires"] = "0"
+            return resp
     return HTMLResponse("<h1>Local AI Video Clipper Dashboard</h1><p>Frontend static files loading...</p>")
 
 
