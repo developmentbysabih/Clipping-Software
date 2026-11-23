@@ -598,3 +598,22 @@ async def delete_clip(filename: str):
             os.remove(thumb_path)
         return {"status": "deleted", "filename": safe_name}
     raise HTTPException(status_code=404, detail="Clip not found")
+
+
+@app.post("/api/open-folder")
+async def open_output_folder():
+    """Open output folder in system file explorer."""
+    import subprocess
+    import platform
+    folder = str(OUTPUT_CLIPS_DIR.resolve())
+    try:
+        if platform.system() == "Windows":
+            os.startfile(folder)
+        elif platform.system() == "Darwin":
+            subprocess.run(["open", folder])
+        else:
+            subprocess.run(["xdg-open", folder])
+        return {"status": "opened", "path": folder}
+    except Exception as e:
+        return {"status": "error", "message": str(e), "path": folder}
+
