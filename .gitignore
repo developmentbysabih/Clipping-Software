@@ -25,5 +25,6 @@ storage/uploads/*
 # IDE & OS
 .vscode/
 .idea/
+.agents/
 Thumbs.db
 Desktop.ini

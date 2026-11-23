@@ -154,10 +154,62 @@ SUBTITLE_PRESETS: Dict[str, Dict[str, Any]] = {
         "max_chars_per_line": 26,
         "animation": "pop",
     },
+    "luxury": {
+        "name": "Luxury Editorial",
+        "description": "Elegant serif with rich gold accent for high-ticket podcasts and finance clips",
+        "font_name": "Georgia",
+        "font_size": 44,
+        "primary_color": "&H00FFFFFF&",    # Crisp White
+        "highlight_color": "&H0024D8F5&",  # Metallic Gold (&HAABBGGRR&: R=F5, G=D8, B=24)
+        "secondary_color": "&H00E0E0E0&",
+        "outline_color": "&H000A0A0A&",
+        "back_color": "&H90000000&",
+        "bold": True,
+        "italic": False,
+        "uppercase": False,
+        "outline": 2.8,
+        "shadow": 1.5,
+        "alignment": 2,
+        "margin_v": 150,
+        "words_per_line": 3,
+        "max_chars_per_line": 28,
+        "animation": "color",
+    },
+    "tiktok_bounce": {
+        "name": "TikTok Viral Pop",
+        "description": "High-energy pop animations with electric coral-pink active word",
+        "font_name": "Arial Black",
+        "font_size": 50,
+        "primary_color": "&H00FFFFFF&",
+        "highlight_color": "&H008035FF&",  # Electric Coral Pink
+        "secondary_color": "&H0000FFFF&",
+        "outline_color": "&H00000000&",
+        "back_color": "&HA0000000&",
+        "bold": True,
+        "italic": False,
+        "uppercase": True,
+        "outline": 4.5,
+        "shadow": 2.5,
+        "alignment": 2,
+        "margin_v": 160,
+        "words_per_line": 2,
+        "max_chars_per_line": 20,
+        "animation": "pop",
+    },
+}
+
+# Aspect Ratio Dimensions
+ASPECT_RATIOS = {
+    "9:16": (1080, 1920),
+    "1:1": (1080, 1080),
+    "16:9": (1920, 1080),
+    "4:5": (1080, 1350),
 }
 
 # Default Video Render Options
 DEFAULT_RENDER_CONFIG = {
+    "aspect_ratio": "9:16",
+    "framing_mode": "blurred_stack", # "blurred_stack", "center_crop", "fit_letterbox", "split_screen"
     "vertical_9_16": True,
     "target_width": 1080,
     "target_height": 1920,
@@ -172,6 +224,10 @@ DEFAULT_RENDER_CONFIG = {
     "gamma": 1.0,
     "subtitle_preset": "hormozi",
     "burn_subtitles": True,
+    "progress_bar": True,
+    "progress_bar_color": "#EC4899",
+    "watermark_text": "",
+    "auto_loudness": True,
     "crf": 20,
     "preset": "fast",
 }

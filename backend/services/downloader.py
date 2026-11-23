@@ -153,6 +153,8 @@ class VideoDownloader:
                     "message": "Finalizing video streams & muxing MP4..."
                 })
 
+        is_live_hint = bool("youtube.com/live" in url.lower() or "/live/" in url.lower())
+
         ydl_opts = {
             "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
             "outtmpl": output_template,
@@ -161,12 +163,19 @@ class VideoDownloader:
             "quiet": True,
             "no_warnings": True,
             "noplaylist": True,
+            "live_from_start": True,  # Enables recording live streams from beginning
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             if not info:
                 raise ValueError(f"Unable to extract video from {url}")
+
+            is_live = bool(
+                info.get("is_live")
+                or info.get("live_status") in ("is_live", "is_upcoming", "post_live", "was_live")
+                or is_live_hint
+            )
 
             filename = ydl.prepare_filename(info)
             # yt-dlp might have merged into .mp4
@@ -190,6 +199,7 @@ class VideoDownloader:
                 "author": info.get("uploader", "Unknown"),
                 "source_url": url,
                 "is_vertical": meta.get("is_vertical", False),
+                "is_live_stream": is_live,
             }
 
     @staticmethod

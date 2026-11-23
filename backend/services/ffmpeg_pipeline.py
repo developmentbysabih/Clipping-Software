@@ -11,7 +11,7 @@ import subprocess
 from pathlib import Path
 from typing import Dict, Any, Optional, Callable, List
 
-from backend.config import OUTPUT_CLIPS_DIR, DEFAULT_RENDER_CONFIG
+from backend.config import OUTPUT_CLIPS_DIR, DEFAULT_RENDER_CONFIG, ASPECT_RATIOS
 
 
 def escape_ffmpeg_filter_path(file_path: Path) -> str:
@@ -73,8 +73,13 @@ class FFmpegPipeline:
             opts.update(render_options)
 
         duration = max(0.5, end_time - start_time)
-        target_w = int(opts.get("target_width", 1080))
-        target_h = int(opts.get("target_height", 1920))
+        aspect_ratio = str(opts.get("aspect_ratio", "9:16"))
+        if aspect_ratio in ASPECT_RATIOS:
+            target_w, target_h = ASPECT_RATIOS[aspect_ratio]
+        else:
+            target_w = int(opts.get("target_width", 1080))
+            target_h = int(opts.get("target_height", 1920))
+
         speed = float(opts.get("speed", 1.0))
         hflip = bool(opts.get("hflip", False))
         zoom = float(opts.get("zoom_factor", 1.0))
@@ -82,7 +87,7 @@ class FFmpegPipeline:
         contrast = float(opts.get("contrast", 1.05))
         brightness = float(opts.get("brightness", 0.02))
         gamma = float(opts.get("gamma", 1.0))
-        vertical_9_16 = bool(opts.get("vertical_9_16", True))
+        framing_mode = str(opts.get("framing_mode", "blurred_stack" if opts.get("vertical_9_16", True) else "fit_letterbox"))
         burn_subs = bool(opts.get("burn_subtitles", True)) and subtitle_path is not None and subtitle_path.exists()
         blur_rad = int(opts.get("blur_strength", 20))
         blur_steps = int(opts.get("blur_steps", 5))
@@ -93,8 +98,8 @@ class FFmpegPipeline:
 
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
-        # Build dynamic Filtergraph
-        if vertical_9_16:
+        # Build dynamic Filtergraph based on framing mode
+        if framing_mode == "blurred_stack":
             # Blurred Background + Crisp Foreground Overlay
             filter_complex_str = (
                 f"[0:v]scale={target_w}:{target_h}:force_original_aspect_ratio=increase,"
@@ -103,9 +108,26 @@ class FFmpegPipeline:
                 f"[bg][fg]overlay=(W-w)/2:(H-h)/2[v_base]"
             )
             current_v_label = "[v_base]"
+        elif framing_mode == "center_crop":
+            # Center zoom-fill (ideal for talking heads)
+            filter_complex_str = (
+                f"[0:v]scale={target_w}:{target_h}:force_original_aspect_ratio=increase,"
+                f"crop={target_w}:{target_h}[v_base]"
+            )
+            current_v_label = "[v_base]"
+        elif framing_mode == "split_screen":
+            # Gaming / Reaction Split-Screen Layout
+            top_h = target_h // 2
+            bot_h = target_h - top_h
+            filter_complex_str = (
+                f"[0:v]scale={target_w}:{top_h}:force_original_aspect_ratio=increase,crop={target_w}:{top_h}[top];"
+                f"[0:v]scale={target_w}:{bot_h}:force_original_aspect_ratio=increase,crop={target_w}:{bot_h},boxblur={blur_rad}:{blur_steps}[bot];"
+                f"[top][bot]vstack[v_base]"
+            )
+            current_v_label = "[v_base]"
         else:
-            # Standard scale maintaining aspect ratio
-            filter_complex_str = f"[0:v]scale={target_w}:{target_h}:force_original_aspect_ratio=decrease,pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2[v_base]"
+            # Clean Fit / Letterbox
+            filter_complex_str = f"[0:v]scale={target_w}:{target_h}:force_original_aspect_ratio=decrease,pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2:color=black[v_base]"
             current_v_label = "[v_base]"
 
         # Secondary Video Filters Pipeline
@@ -143,14 +165,37 @@ class FFmpegPipeline:
             escaped_sub = escape_ffmpeg_filter_path(subtitle_path)
             post_filters.append(f"ass={escaped_sub}")
 
+        # 6. Animated Bottom Progress Line (Viral Retention Bar)
+        if opts.get("progress_bar", True):
+            p_color = str(opts.get("progress_bar_color", "#EC4899")).lstrip("#")
+            bar_h = 14
+            # Draw animated filled rectangle at the bottom
+            post_filters.append(
+                f"drawbox=x=0:y=ih-{bar_h}:w='iw*min(1\,t/{duration:.3f})':h={bar_h}:color=0x{p_color}@0.95:t=fill"
+            )
+
+        # 7. Creator Watermark / Handle
+        wm = str(opts.get("watermark_text", "")).strip()
+        if wm:
+            safe_wm = wm.replace("'", r"\'").replace(":", r"\:")
+            post_filters.append(
+                f"drawtext=text='{safe_wm}':x=(w-text_w)/2:y=ih-90:fontsize=28:fontcolor=white@0.85:box=1:boxcolor=black@0.45:boxborderw=8"
+            )
+
         if post_filters:
             filter_complex_str += f";{current_v_label}{','.join(post_filters)}[v_out]"
             final_v_map = "[v_out]"
         else:
             final_v_map = current_v_label
 
-        # Audio Filtergraph: atempo
+        # Audio Filtergraph: atempo + dynamic speech loudnorm
         a_filter = build_atempo_chain(speed)
+        if opts.get("auto_loudness", True):
+            if a_filter != "anull":
+                a_filter = f"{a_filter},loudnorm=I=-16:TP=-1.5:LRA=11"
+            else:
+                a_filter = "loudnorm=I=-16:TP=-1.5:LRA=11"
+
         filter_complex_str += f";[0:a]{a_filter}[a_out]"
         final_a_map = "[a_out]"
 

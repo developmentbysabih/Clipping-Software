@@ -1,30 +1,67 @@
 /**
- * Local AI Video Clipper & Repurposing Engine - Frontend Dashboard Logic
+ * AutoClip Studio Pro - Frontend Dashboard Logic
+ * UI/UX Pro Max & Design Taste Guidelines
  */
 
 // Application State
 const state = {
   currentJobId: null,
-  activeTab: 'url',
+  activeTab: 'url', // 'url', 'live', 'upload'
+  aspectRatio: '9:16',
   selectedPreset: 'hormozi',
+  progressBarColor: '#EC4899',
   selectedFile: null,
   systemStatus: null,
   jobData: null,
 };
+
+// Toast notification helper
+function showToast(message, icon = 'check-circle') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4 text-emerald-400"></i><span>${message}</span>`;
+  container.appendChild(toast);
+  if (window.lucide) lucide.createIcons({ root: toast });
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    toast.style.transition = 'all 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 2800);
+}
 
 // DOM Elements
 const elements = {
   deviceVal: document.getElementById('device-val'),
   ollamaVal: document.getElementById('ollama-val'),
   ollamaDot: document.getElementById('ollama-dot'),
+  
+  // Tabs
   tabBtnUrl: document.getElementById('tab-btn-url'),
+  tabBtnLive: document.getElementById('tab-btn-live'),
   tabBtnUpload: document.getElementById('tab-btn-upload'),
   tabContentUrl: document.getElementById('tab-content-url'),
+  tabContentLive: document.getElementById('tab-content-live'),
   tabContentUpload: document.getElementById('tab-content-upload'),
+  
+  // Inputs
   inputUrl: document.getElementById('input-url'),
+  inputLiveUrl: document.getElementById('input-live-url'),
   inputFile: document.getElementById('input-file'),
   dropzone: document.getElementById('dropzone'),
   fileNameDisplay: document.getElementById('file-name-display'),
+  
+  // Customizations
+  labelSelectedRatio: document.getElementById('label-selected-ratio'),
+  selectFramingMode: document.getElementById('select-framing-mode'),
+  checkProgressBar: document.getElementById('check-progress-bar'),
+  checkLoudnorm: document.getElementById('check-loudnorm'),
+  checkHflip: document.getElementById('check-hflip'),
+  inputWatermark: document.getElementById('input-watermark'),
+  barColors: document.getElementById('bar-colors'),
+  
   selectWhisperModel: document.getElementById('select-whisper-model'),
   selectOllamaModel: document.getElementById('select-ollama-model'),
   inputMinDur: document.getElementById('input-min-dur'),
@@ -34,9 +71,11 @@ const elements = {
   checkSnap: document.getElementById('check-snap'),
   aiModeOptions: document.getElementById('ai-mode-options'),
   seqModeOptions: document.getElementById('sequential-mode-options'),
+  
   btnStartProcess: document.getElementById('btn-start-process'),
   btnBatchRender: document.getElementById('btn-batch-render'),
   btnRefreshGallery: document.getElementById('btn-refresh-gallery'),
+  
   sectionProgress: document.getElementById('section-progress'),
   progressStageTitle: document.getElementById('progress-stage-title'),
   progressMessage: document.getElementById('progress-message'),
@@ -46,14 +85,19 @@ const elements = {
   stepTranscribe: document.getElementById('step-transcribe'),
   stepAnalyze: document.getElementById('step-analyze'),
   stepRender: document.getElementById('step-render'),
+  
   sectionClips: document.getElementById('section-clips'),
   clipsGrid: document.getElementById('clips-grid'),
+  clipsCountBadge: document.getElementById('clips-count-badge'),
+  
   sectionGallery: document.getElementById('section-gallery'),
   galleryGrid: document.getElementById('gallery-grid'),
   galleryEmpty: document.getElementById('gallery-empty'),
+  
   sectionTranscript: document.getElementById('section-transcript'),
   transcriptContainer: document.getElementById('transcript-container'),
   inputSearchTranscript: document.getElementById('input-search-transcript'),
+  
   subMockup: document.getElementById('sub-mockup'),
   mockupActiveWord: document.getElementById('mockup-active-word'),
   rangeSpeed: document.getElementById('range-speed'),
@@ -62,8 +106,6 @@ const elements = {
   valZoom: document.getElementById('val-zoom'),
   rangeSat: document.getElementById('range-sat'),
   valSat: document.getElementById('val-sat'),
-  checkBlurStack: document.getElementById('check-blur-stack'),
-  checkHflip: document.getElementById('check-hflip'),
 };
 
 // Initialize Application
@@ -78,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadGallery();
 });
 
-// Fetch system info (Hardware, Ollama status, Whisper models)
+// Fetch system info
 async function initSystemStatus() {
   try {
     const res = await fetch('/api/status');
@@ -87,17 +129,16 @@ async function initSystemStatus() {
 
     // Device Badge
     const isCuda = data.device === 'cuda';
-    elements.deviceVal.textContent = isCuda ? 'NVIDIA CUDA (Fast)' : 'CPU (Optimized)';
+    elements.deviceVal.textContent = isCuda ? 'NVIDIA GPU (CUDA)' : 'CPU Optimized';
     elements.deviceVal.className = isCuda ? 'text-emerald-400 font-bold' : 'text-slate-200 font-bold';
 
     // Ollama Status
     const ollama = data.ollama;
     if (ollama && ollama.online) {
-      elements.ollamaVal.textContent = `Online (${ollama.models.length} models)`;
+      elements.ollamaVal.textContent = `Ollama (${ollama.models.length || 'Active'})`;
       elements.ollamaVal.className = 'text-emerald-400 font-bold';
       elements.ollamaDot.className = 'w-2 h-2 rounded-full bg-emerald-400';
 
-      // Populate Ollama models
       if (ollama.models && ollama.models.length > 0) {
         elements.selectOllamaModel.innerHTML = '';
         ollama.models.forEach(m => {
@@ -108,14 +149,14 @@ async function initSystemStatus() {
         });
       }
     } else {
-      elements.ollamaVal.textContent = 'Offline (Heuristics Fallback Active)';
+      elements.ollamaVal.textContent = 'Heuristic Engine (Local)';
       elements.ollamaVal.className = 'text-amber-400 font-medium';
       elements.ollamaDot.className = 'w-2 h-2 rounded-full bg-amber-400';
     }
   } catch (err) {
     console.error('Failed to load system status:', err);
     elements.deviceVal.textContent = 'CPU';
-    elements.ollamaVal.textContent = 'Heuristic Mode';
+    elements.ollamaVal.textContent = 'Heuristic';
   }
 }
 
@@ -138,12 +179,12 @@ function startJobPolling(jobId) {
         }
       }
     } catch (e) {
-      // Ignore transient errors
+      // transient network skip
     }
   }, 800);
 }
 
-// Check for recent or active running jobs on page load
+// Check recent running jobs on load
 async function checkActiveJobs() {
   try {
     const res = await fetch('/api/jobs');
@@ -151,7 +192,6 @@ async function checkActiveJobs() {
       const jobs = await res.json();
       if (jobs && jobs.length > 0) {
         const latestJob = jobs[0];
-        // If the latest job is running or recently finished, display it
         if (latestJob.status === 'running' || latestJob.status === 'rendering') {
           state.currentJobId = latestJob.id;
           elements.sectionProgress.classList.remove('hidden');
@@ -168,7 +208,7 @@ async function checkActiveJobs() {
   }
 }
 
-// Connect to Server-Sent Events stream for live progress
+// Connect to Server-Sent Events stream
 function initSSE() {
   if (window._sseSource) {
     window._sseSource.close();
@@ -185,20 +225,60 @@ function initSSE() {
         handleJobUpdate(data);
       }
     } catch (e) {
-      // Keepalive ping
+      // ping
     }
   };
 
   evtSource.onerror = () => {
-    // Reconnects automatically
+    // auto reconnects
   };
 }
 
 // Setup Event Listeners
 function initEventListeners() {
-  // Tab Switching
+  // Source Tabs
   elements.tabBtnUrl.addEventListener('click', () => switchTab('url'));
+  elements.tabBtnLive.addEventListener('click', () => switchTab('live'));
   elements.tabBtnUpload.addEventListener('click', () => switchTab('upload'));
+
+  // Aspect Ratio Buttons
+  document.querySelectorAll('.ratio-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const target = e.currentTarget;
+      const ratio = target.getAttribute('data-ratio');
+      state.aspectRatio = ratio;
+      
+      document.querySelectorAll('.ratio-btn').forEach(b => {
+        b.className = 'ratio-btn p-2 rounded-xl border border-slate-800 bg-slate-950/60 text-center hover:border-slate-700 transition-all cursor-pointer';
+        b.querySelector('.text-xs').className = 'text-xs font-bold text-slate-300';
+      });
+
+      target.className = 'ratio-btn p-2 rounded-xl border border-pink-500 bg-pink-950/30 text-center transition-all cursor-pointer';
+      target.querySelector('.text-xs').className = 'text-xs font-bold text-white';
+
+      const dimMap = {
+        '9:16': '9:16 (1080x1920)',
+        '1:1': '1:1 (1080x1080)',
+        '4:5': '4:5 (1080x1350)',
+        '16:9': '16:9 (1920x1080)',
+      };
+      elements.labelSelectedRatio.textContent = dimMap[ratio] || ratio;
+    });
+  });
+
+  // Progress Bar Color Picker
+  if (elements.barColors) {
+    elements.barColors.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const col = e.currentTarget.getAttribute('data-color');
+        state.progressBarColor = col;
+        elements.barColors.querySelectorAll('button').forEach(b => {
+          b.className = b.className.replace(/ring-2 ring-white ring-offset-1 ring-offset-slate-900/g, '').trim();
+        });
+        e.currentTarget.className += ' ring-2 ring-white ring-offset-1 ring-offset-slate-900';
+      });
+    });
+  }
 
   // Clipping Mode Radios
   document.querySelectorAll('input[name="clipping_mode"]').forEach(radio => {
@@ -223,36 +303,30 @@ function initEventListeners() {
 
   elements.dropzone.addEventListener('dragover', (e) => {
     e.preventDefault();
-    elements.dropzone.classList.add('border-indigo-500', 'bg-indigo-950/20');
+    elements.dropzone.classList.add('border-pink-500', 'bg-pink-950/20');
   });
 
   elements.dropzone.addEventListener('dragleave', () => {
-    elements.dropzone.classList.remove('border-indigo-500', 'bg-indigo-950/20');
+    elements.dropzone.classList.remove('border-pink-500', 'bg-pink-950/20');
   });
 
   elements.dropzone.addEventListener('drop', (e) => {
     e.preventDefault();
-    elements.dropzone.classList.remove('border-indigo-500', 'bg-indigo-950/20');
+    elements.dropzone.classList.remove('border-pink-500', 'bg-pink-950/20');
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileSelected(e.dataTransfer.files[0]);
     }
   });
 
-  // Subtitle Preset Buttons
+  // Preset Buttons
   document.querySelectorAll('.preset-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.preset-btn').forEach(b => {
-        b.classList.remove('border-indigo-500', 'bg-indigo-950/30');
-        b.classList.add('border-slate-700', 'bg-slate-900/60');
-      });
-      btn.classList.remove('border-slate-700', 'bg-slate-900/60');
-      btn.classList.add('border-indigo-500', 'bg-indigo-950/30');
-      state.selectedPreset = btn.dataset.preset;
-      updateSubtitleMockup(state.selectedPreset);
+    btn.addEventListener('click', (e) => {
+      const preset = e.currentTarget.getAttribute('data-preset');
+      selectSubtitlePreset(preset);
     });
   });
 
-  // Fine-Tuning Sliders
+  // Range Sliders Value Trackers
   elements.rangeSpeed.addEventListener('input', (e) => {
     elements.valSpeed.textContent = `${parseFloat(e.target.value).toFixed(2)}x`;
   });
@@ -274,70 +348,126 @@ function initEventListeners() {
   });
 }
 
+// Switch Ingestion Tabs
 function switchTab(tab) {
   state.activeTab = tab;
+  
+  // Reset tabs
+  elements.tabBtnUrl.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer';
+  elements.tabBtnLive.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer';
+  elements.tabBtnUpload.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer';
+  
+  elements.tabContentUrl.classList.add('hidden');
+  elements.tabContentLive.classList.add('hidden');
+  elements.tabContentUpload.classList.add('hidden');
+
   if (tab === 'url') {
-    elements.tabBtnUrl.className = 'px-3 py-1 text-xs font-medium rounded-md bg-indigo-600 text-white shadow transition-all flex items-center gap-1.5';
-    elements.tabBtnUpload.className = 'px-3 py-1 text-xs font-medium rounded-md text-slate-400 hover:text-white transition-all flex items-center gap-1.5';
+    elements.tabBtnUrl.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-pink-600 text-white shadow-md shadow-pink-600/30 transition-all flex items-center gap-1.5 cursor-pointer';
     elements.tabContentUrl.classList.remove('hidden');
-    elements.tabContentUpload.classList.add('hidden');
+  } else if (tab === 'live') {
+    elements.tabBtnLive.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-600 text-white shadow-md shadow-rose-600/30 transition-all flex items-center gap-1.5 cursor-pointer';
+    elements.tabContentLive.classList.remove('hidden');
   } else {
-    elements.tabBtnUpload.className = 'px-3 py-1 text-xs font-medium rounded-md bg-indigo-600 text-white shadow transition-all flex items-center gap-1.5';
-    elements.tabBtnUrl.className = 'px-3 py-1 text-xs font-medium rounded-md text-slate-400 hover:text-white transition-all flex items-center gap-1.5';
+    elements.tabBtnUpload.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-pink-600 text-white shadow-md shadow-pink-600/30 transition-all flex items-center gap-1.5 cursor-pointer';
     elements.tabContentUpload.classList.remove('hidden');
-    elements.tabContentUrl.classList.add('hidden');
   }
 }
 
+// Handle file selection
 function handleFileSelected(file) {
   state.selectedFile = file;
-  elements.fileNameDisplay.textContent = `Selected: ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB)`;
+  elements.fileNameDisplay.textContent = `${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB)`;
   elements.fileNameDisplay.classList.remove('hidden');
 }
 
-function updateSubtitleMockup(preset) {
-  elements.subMockup.className = 'py-2 text-base font-bold tracking-wide transition-all';
+// Select subtitle style preset
+function selectSubtitlePreset(preset) {
+  state.selectedPreset = preset;
+
+  document.querySelectorAll('.preset-btn').forEach(b => {
+    b.className = 'preset-btn p-2 rounded-xl border border-slate-800 bg-slate-950/60 text-left hover:border-slate-700 transition-all cursor-pointer';
+  });
+
+  const activeBtn = document.querySelector(`.preset-btn[data-preset="${preset}"]`);
+  if (activeBtn) {
+    activeBtn.className = 'preset-btn p-2 rounded-xl border border-pink-500 bg-pink-950/30 text-left transition-all cursor-pointer';
+  }
+
+  // Update Preview Mockup
+  elements.subMockup.className = `py-2 text-base font-bold tracking-wide transition-all sub-${preset}`;
+  
   if (preset === 'hormozi') {
-    elements.subMockup.classList.add('sub-hormozi');
     elements.mockupActiveWord.className = 'text-yellow-400 scale-105 inline-block';
   } else if (preset === 'beast') {
-    elements.subMockup.classList.add('sub-beast');
-    elements.mockupActiveWord.className = 'text-emerald-400 scale-110 inline-block';
-  } else if (preset === 'minimal') {
-    elements.subMockup.classList.add('sub-minimal');
-    elements.mockupActiveWord.className = 'text-sky-400 underline underline-offset-4 inline-block font-semibold';
+    elements.mockupActiveWord.className = 'text-emerald-400 scale-105 inline-block';
+  } else if (preset === 'tiktok_bounce') {
+    elements.mockupActiveWord.className = 'text-pink-500 scale-110 inline-block';
   } else if (preset === 'cyberpunk') {
-    elements.subMockup.classList.add('sub-cyberpunk');
-    elements.mockupActiveWord.className = 'text-cyan-300 font-extrabold inline-block';
+    elements.mockupActiveWord.className = 'text-cyan-400 scale-105 inline-block';
+  } else if (preset === 'luxury') {
+    elements.mockupActiveWord.className = 'text-amber-300 scale-105 inline-block italic';
+  } else {
+    elements.mockupActiveWord.className = 'text-sky-400 inline-block font-semibold';
   }
+}
+
+// Build common render options payload
+function getRenderOptionsPayload() {
+  return {
+    aspect_ratio: state.aspectRatio,
+    framing_mode: elements.selectFramingMode.value,
+    progress_bar: elements.checkProgressBar.checked,
+    progress_bar_color: state.progressBarColor,
+    watermark_text: elements.inputWatermark ? elements.inputWatermark.value : '',
+    auto_loudness: elements.checkLoudnorm ? elements.checkLoudnorm.checked : true,
+    hflip: elements.checkHflip.checked,
+    speed: parseFloat(elements.rangeSpeed.value),
+    zoom_factor: parseFloat(elements.rangeZoom.value),
+    saturation: parseFloat(elements.rangeSat.value),
+    subtitle_preset: state.selectedPreset,
+    burn_subtitles: true,
+  };
 }
 
 // Start Processing Pipeline
 async function startPipeline() {
-  const clippingMode = document.querySelector('input[name="clipping_mode"]:checked').value;
-  const whisperModel = elements.selectWhisperModel.value;
-  const ollamaModel = elements.selectOllamaModel.value;
+  const isLive = state.activeTab === 'live';
+  const urlVal = isLive ? elements.inputLiveUrl.value.trim() : elements.inputUrl.value.trim();
 
+  if (state.activeTab !== 'upload' && !urlVal) {
+    alert(isLive ? 'Please enter a valid YouTube Live Stream link.' : 'Please enter a valid YouTube or video URL.');
+    return;
+  }
+
+  if (state.activeTab === 'upload' && !state.selectedFile) {
+    alert('Please select or drag a video file to upload.');
+    return;
+  }
+
+  const whisperModel = elements.selectWhisperModel.value;
+  const clippingMode = isLive ? 'live_peaks' : document.querySelector('input[name="clipping_mode"]:checked').value;
+  const ollamaModel = elements.selectOllamaModel.value;
+  const renderOptions = getRenderOptionsPayload();
+
+  // Reset UI
   elements.sectionProgress.classList.remove('hidden');
   elements.sectionClips.classList.add('hidden');
   elements.sectionTranscript.classList.add('hidden');
-  updateProgressUI({ stage: 'starting', progress: 2.0, message: 'Initiating video pipeline...' });
+  
+  updateProgressUI({
+    stage: 'starting',
+    progress: 2.0,
+    message: isLive ? 'Connecting to YouTube Live Stream & analyzing broadcast...' : 'Initiating video pipeline...'
+  });
 
   try {
     let res;
-    if (state.activeTab === 'url') {
-      const url = elements.inputUrl.value.trim();
-      if (!url) {
-        alert('Please enter a valid video URL.');
-        elements.sectionProgress.classList.add('hidden');
-        return;
-      }
-
+    if (state.activeTab === 'url' || state.activeTab === 'live') {
       res = await fetch('/api/process/url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          url: url,
+          url: urlVal,
           whisper_model: whisperModel,
           clipping_mode: clippingMode,
           ollama_model: ollamaModel,
@@ -346,16 +476,12 @@ async function startPipeline() {
           sequential_duration: parseFloat(elements.inputSeqDur.value),
           sequential_overlap: parseFloat(elements.inputSeqOverlap.value),
           snap_boundaries: elements.checkSnap.checked,
-          auto_render: false
+          auto_render: false,
+          is_live_stream: isLive,
+          render_options: renderOptions,
         })
       });
     } else {
-      if (!state.selectedFile) {
-        alert('Please select a video file to upload.');
-        elements.sectionProgress.classList.add('hidden');
-        return;
-      }
-
       const formData = new FormData();
       formData.append('file', state.selectedFile);
       formData.append('whisper_model', whisperModel);
@@ -381,6 +507,7 @@ async function startPipeline() {
     const data = await res.json();
     state.currentJobId = data.job_id;
     startJobPolling(data.job_id);
+    showToast(isLive ? 'Live stream ingestion queued!' : 'Video pipeline queued!');
 
   } catch (err) {
     console.error('Pipeline start failed:', err);
@@ -398,201 +525,274 @@ function handleJobUpdate(job) {
     if (job.clips && job.clips.length > 0) {
       renderCandidateClips(job.clips, job.id);
       elements.sectionClips.classList.remove('hidden');
+      if (elements.clipsCountBadge) {
+        elements.clipsCountBadge.textContent = `${job.clips.length} viral clips`;
+      }
     }
     if (job.transcript && job.transcript.segments) {
       renderTranscript(job.transcript.segments);
       elements.sectionTranscript.classList.remove('hidden');
     }
+  }
+
+  if (job.status === 'completed' && job.rendered_clips) {
     loadGallery();
-  } else if (job.status === 'failed') {
-    elements.progressStageTitle.textContent = 'Processing Failed';
-    elements.progressMessage.textContent = job.error || 'An unexpected error occurred.';
-    elements.progressMessage.className = 'text-xs text-rose-400 font-medium';
   }
 }
 
+// Update Progress HUD elements
 function updateProgressUI(job) {
   const pct = Math.min(100, Math.max(0, job.progress || 0));
   elements.progressPercent.textContent = `${Math.round(pct)}%`;
   elements.progressBarFill.style.width = `${pct}%`;
   elements.progressMessage.textContent = job.message || 'Processing...';
 
-  // Highlight step boxes
-  const resetSteps = () => {
-    [elements.stepIngest, elements.stepTranscribe, elements.stepAnalyze, elements.stepRender].forEach(el => {
-      el.className = 'p-2 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-400 font-medium';
-    });
+  // Titles by stage
+  const titles = {
+    'starting': 'Initializing Pipeline...',
+    'ingestion': '1. Ingesting Source Video',
+    'downloading': '1. Downloading Stream via yt-dlp',
+    'transcription': '2. Speech-to-Text (faster-whisper)',
+    'analyzing': '3. AI Viral Hook Analysis',
+    'ready': 'Clips Identified & Ready to Render',
+    'rendering': '4. FFmpeg Video Compositing',
+    'complete': 'Pipeline Completed Successfully',
+    'error': 'Pipeline Error Encountered'
   };
+  elements.progressStageTitle.textContent = titles[job.stage] || 'Processing Video...';
 
-  const activeClass = 'p-2 rounded-lg bg-indigo-950/60 border border-indigo-500 text-indigo-300 font-bold shadow-lg shadow-indigo-500/20';
-  const doneClass = 'p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/60 text-emerald-400 font-semibold';
+  // Reset Step Indicators
+  [elements.stepIngest, elements.stepTranscribe, elements.stepAnalyze, elements.stepRender].forEach(el => {
+    el.className = 'p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-500 font-semibold transition-all';
+  });
 
-  resetSteps();
-  if (job.stage === 'ingestion' || job.stage === 'downloading') {
+  const activeClass = 'p-2.5 rounded-xl bg-pink-950/30 border border-pink-500 text-pink-400 font-bold glow-active';
+  const doneClass = 'p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-500/50 text-emerald-400 font-bold';
+
+  if (['ingestion', 'downloading'].includes(job.stage)) {
     elements.stepIngest.className = activeClass;
-    elements.progressStageTitle.textContent = 'Step 1: Downloading & Ingesting Video';
   } else if (job.stage === 'transcription') {
     elements.stepIngest.className = doneClass;
     elements.stepTranscribe.className = activeClass;
-    elements.progressStageTitle.textContent = 'Step 2: faster-whisper Speech-to-Text';
   } else if (job.stage === 'analyzing') {
     elements.stepIngest.className = doneClass;
     elements.stepTranscribe.className = doneClass;
     elements.stepAnalyze.className = activeClass;
-    elements.progressStageTitle.textContent = 'Step 3: AI Viral Hook Detection';
   } else if (job.stage === 'rendering') {
     elements.stepIngest.className = doneClass;
     elements.stepTranscribe.className = doneClass;
     elements.stepAnalyze.className = doneClass;
     elements.stepRender.className = activeClass;
-    elements.progressStageTitle.textContent = 'Step 4: FFmpeg 9:16 Composite Rendering';
-  } else if (job.stage === 'ready' || job.stage === 'complete') {
-    [elements.stepIngest, elements.stepTranscribe, elements.stepAnalyze, elements.stepRender].forEach(el => {
-      el.className = doneClass;
-    });
-    elements.progressStageTitle.textContent = 'Pipeline Execution Complete!';
+  } else if (job.stage === 'complete' || job.stage === 'ready') {
+    elements.stepIngest.className = doneClass;
+    elements.stepTranscribe.className = doneClass;
+    elements.stepAnalyze.className = doneClass;
+    if (job.stage === 'complete') elements.stepRender.className = doneClass;
   }
 }
 
-// Render Candidate Clip Cards
+// Copy Text to Clipboard with Toast
+async function copyToClipboard(text, successMsg = 'Copied to clipboard!') {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast(successMsg, 'copy');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    showToast(successMsg, 'copy');
+  }
+}
+
+// Render Candidate Viral Clips Grid
 function renderCandidateClips(clips, jobId) {
   elements.clipsGrid.innerHTML = '';
 
   clips.forEach((clip, index) => {
     const card = document.createElement('div');
-    card.className = 'glass-panel p-5 glass-panel-hover flex flex-col justify-between space-y-4';
+    card.className = 'glass-panel p-5 space-y-4 flex flex-col justify-between glass-panel-hover';
 
-    const virality = clip.virality_score || 85;
-    let badgeColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
-    if (virality < 70) badgeColor = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+    const score = clip.virality_score || 85;
+    let badgeClass = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+    let scoreIcon = 'flame';
+    if (score < 80) {
+      badgeClass = 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30';
+      scoreIcon = 'zap';
+    } else if (score < 90) {
+      badgeClass = 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+      scoreIcon = 'star';
+    }
+
+    const duration = (clip.end_time - clip.start_time).toFixed(1);
+    const hookType = clip.hook_type || (clip.is_livestream_peak ? 'Live Stream Climax' : 'Viral Hook');
+    const tags = clip.hashtags && clip.hashtags.length > 0 ? clip.hashtags.join(' ') : '#Shorts #Viral #Fyp';
+    const captionIdea = clip.caption_idea || `${clip.title} 🔥 Watch till the end! ${tags}`;
 
     card.innerHTML = `
       <div class="space-y-3">
+        <!-- Top Row: Score Badge & Duration -->
         <div class="flex items-center justify-between">
-          <span class="text-xs px-2.5 py-1 rounded-full border font-bold ${badgeColor}">
-            Virality: ${virality}/100
-          </span>
-          <span class="text-xs font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-            ${clip.duration}s
-          </span>
-        </div>
-
-        <div>
-          <h4 class="text-sm font-bold text-white line-clamp-1">${escapeHtml(clip.title)}</h4>
-          <p class="text-xs text-indigo-300 mt-1 italic line-clamp-2">"${escapeHtml(clip.hook_sentence || '')}"</p>
-        </div>
-
-        <div class="bg-slate-900/60 p-2.5 rounded-lg border border-white/5 text-[11px] text-slate-400">
-          <p class="font-medium text-slate-300 mb-0.5">Editor Note:</p>
-          <p class="line-clamp-2">${escapeHtml(clip.reasoning || 'High retention standalone moment.')}</p>
-        </div>
-
-        <!-- Timestamp Controls -->
-        <div class="grid grid-cols-2 gap-2 text-xs pt-1">
-          <div class="bg-slate-900 p-1.5 rounded border border-slate-800">
-            <label class="text-[10px] text-slate-500 block">Start (s)</label>
-            <input type="number" step="0.1" value="${clip.start_time}" id="clip-start-${index}" class="w-full bg-transparent text-white font-mono text-xs focus:outline-none">
+          <div class="flex items-center gap-1.5">
+            <span class="px-2.5 py-1 rounded-full text-xs font-black border flex items-center gap-1 ${badgeClass}">
+              <i data-lucide="${scoreIcon}" class="w-3.5 h-3.5"></i>
+              ${score}/100 Retention
+            </span>
+            <span class="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-[10px] text-slate-300 font-medium">
+              ${hookType}
+            </span>
           </div>
-          <div class="bg-slate-900 p-1.5 rounded border border-slate-800">
-            <label class="text-[10px] text-slate-500 block">End (s)</label>
-            <input type="number" step="0.1" value="${clip.end_time}" id="clip-end-${index}" class="w-full bg-transparent text-white font-mono text-xs focus:outline-none">
+          <span class="text-xs text-slate-400 font-mono-numbers bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+            ${clip.start_time.toFixed(1)}s - ${clip.end_time.toFixed(1)}s (${duration}s)
+          </span>
+        </div>
+
+        <!-- Title -->
+        <h3 class="text-base font-bold text-white tracking-tight">${clip.title}</h3>
+
+        <!-- Verbatim Hook Quote Pill -->
+        ${clip.hook_sentence ? `
+          <div class="p-3 bg-slate-950/80 rounded-xl border border-white/[0.06] text-xs text-slate-300 italic flex items-start gap-2">
+            <i data-lucide="quote" class="w-3.5 h-3.5 text-pink-400 shrink-0 mt-0.5"></i>
+            <span>"${clip.hook_sentence}"</span>
           </div>
+        ` : ''}
+
+        <!-- AI Viral Reasoning -->
+        <p class="text-xs text-slate-400 leading-relaxed">${clip.reasoning || 'Selected for maximum viewer watch-time retention.'}</p>
+        
+        <!-- Social Caption Snippet -->
+        <div class="p-2.5 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1.5">
+          <div class="flex items-center justify-between text-[10px] text-slate-400">
+            <span class="font-semibold text-slate-300 flex items-center gap-1">
+              <i data-lucide="share-2" class="w-3 h-3 text-cyan-400"></i> Social Caption & Hashtags
+            </span>
+            <button class="btn-copy-caption text-pink-400 hover:text-pink-300 font-semibold cursor-pointer">
+              Copy Caption
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-400 line-clamp-2">${captionIdea}</p>
         </div>
       </div>
 
-      <div class="pt-3 border-t border-white/5">
-        <button onclick="renderSingleClip('${jobId}', ${index})" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow flex items-center justify-center space-x-1.5 transition">
-          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-          <span>Render 9:16 Vertical Clip</span>
+      <!-- Card Action Footer -->
+      <div class="pt-3 border-t border-white/[0.06] flex items-center justify-between gap-2">
+        <select class="clip-sub-preset bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200">
+          <option value="hormozi" ${state.selectedPreset === 'hormozi' ? 'selected' : ''}>Hormozi</option>
+          <option value="beast" ${state.selectedPreset === 'beast' ? 'selected' : ''}>Beast</option>
+          <option value="tiktok_bounce" ${state.selectedPreset === 'tiktok_bounce' ? 'selected' : ''}>TikTok Pop</option>
+          <option value="cyberpunk" ${state.selectedPreset === 'cyberpunk' ? 'selected' : ''}>Cyberpunk</option>
+          <option value="luxury" ${state.selectedPreset === 'luxury' ? 'selected' : ''}>Luxury</option>
+          <option value="minimal" ${state.selectedPreset === 'minimal' ? 'selected' : ''}>Minimal</option>
+        </select>
+
+        <button class="btn-render-single flex-1 py-1.5 px-3 bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold rounded-lg shadow-md shadow-pink-600/25 flex items-center justify-center space-x-1.5 transition cursor-pointer">
+          <i data-lucide="film" class="w-3.5 h-3.5"></i>
+          <span>Render 9:16 Clip</span>
         </button>
       </div>
     `;
+
+    // Copy Caption Button
+    const btnCopy = card.querySelector('.btn-copy-caption');
+    if (btnCopy) {
+      btnCopy.addEventListener('click', () => {
+        copyToClipboard(captionIdea, 'Caption and hashtags copied to clipboard!');
+      });
+    }
+
+    // Single Render Click
+    const btnRender = card.querySelector('.btn-render-single');
+    const selectPreset = card.querySelector('.clip-sub-preset');
+
+    btnRender.addEventListener('click', async () => {
+      btnRender.disabled = true;
+      btnRender.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Queued...</span>';
+      if (window.lucide) lucide.createIcons({ root: btnRender });
+
+      try {
+        const renderOpts = getRenderOptionsPayload();
+        renderOpts.subtitle_preset = selectPreset.value;
+
+        const res = await fetch('/api/render/clip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            video_id: jobId,
+            clip_index: index,
+            start_time: clip.start_time,
+            end_time: clip.end_time,
+            title: clip.title,
+            subtitle_preset: selectPreset.value,
+            render_options: renderOpts,
+          })
+        });
+
+        if (res.ok) {
+          showToast(`Render queued for "${clip.title}"!`);
+          elements.sectionProgress.classList.remove('hidden');
+          startJobPolling(jobId);
+        }
+      } catch (err) {
+        alert(`Render failed: ${err.message}`);
+      } finally {
+        btnRender.disabled = false;
+        btnRender.innerHTML = '<i data-lucide="film" class="w-3.5 h-3.5"></i><span>Render 9:16 Clip</span>';
+        if (window.lucide) lucide.createIcons({ root: btnRender });
+      }
+    });
 
     elements.clipsGrid.appendChild(card);
   });
 
   if (window.lucide) {
-    lucide.createIcons();
+    lucide.createIcons({ root: elements.clipsGrid });
   }
 }
 
-// Render Single Clip on Demand
-window.renderSingleClip = async function(jobId, clipIndex) {
-  const startInput = document.getElementById(`clip-start-${clipIndex}`);
-  const endInput = document.getElementById(`clip-end-${clipIndex}`);
-  
-  const startTime = startInput ? parseFloat(startInput.value) : 0;
-  const endTime = endInput ? parseFloat(endInput.value) : 0;
-
-  const renderOpts = getSelectedRenderOptions();
-
-  elements.sectionProgress.classList.remove('hidden');
-  updateProgressUI({ stage: 'rendering', progress: 5.0, message: `Starting render for Clip #${clipIndex + 1}...` });
-
-  try {
-    const res = await fetch('/api/render-clip', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        video_id: jobId,
-        clip_index: clipIndex,
-        start_time: startTime,
-        end_time: endTime,
-        subtitle_preset: state.selectedPreset,
-        render_options: renderOpts
-      })
-    });
-    if (!res.ok) throw new Error('Render request failed');
-  } catch (err) {
-    alert(`Render error: ${err.message}`);
-  }
-};
-
 // Batch Render All Clips
 async function batchRenderAll() {
-  if (!state.currentJobId) {
-    alert('No active job found.');
-    return;
-  }
+  if (!state.currentJobId) return;
 
-  const renderOpts = getSelectedRenderOptions();
-  elements.sectionProgress.classList.remove('hidden');
-  updateProgressUI({ stage: 'rendering', progress: 0.0, message: 'Initiating batch render of all clips...' });
+  elements.btnBatchRender.disabled = true;
+  elements.btnBatchRender.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i><span>Queueing Batch...</span>';
+  if (window.lucide) lucide.createIcons({ root: elements.btnBatchRender });
 
   try {
-    const res = await fetch('/api/batch-render', {
+    const renderOpts = getRenderOptionsPayload();
+    const res = await fetch('/api/render/batch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         job_id: state.currentJobId,
         subtitle_preset: state.selectedPreset,
-        render_options: renderOpts
+        render_options: renderOpts,
       })
     });
-    if (!res.ok) throw new Error('Batch render request failed');
+
+    if (res.ok) {
+      showToast('Batch render of all clips started!');
+      elements.sectionProgress.classList.remove('hidden');
+      startJobPolling(state.currentJobId);
+    }
   } catch (err) {
-    alert(`Batch render error: ${err.message}`);
+    alert(`Batch render failed: ${err.message}`);
+  } finally {
+    elements.btnBatchRender.disabled = false;
+    elements.btnBatchRender.innerHTML = '<i data-lucide="layers" class="w-4 h-4"></i><span>Render All Clips (Batch)</span>';
+    if (window.lucide) lucide.createIcons({ root: elements.btnBatchRender });
   }
 }
 
-function getSelectedRenderOptions() {
-  return {
-    vertical_9_16: elements.checkBlurStack.checked,
-    hflip: elements.checkHflip.checked,
-    speed: parseFloat(elements.rangeSpeed.value),
-    zoom_factor: parseFloat(elements.rangeZoom.value),
-    saturation: parseFloat(elements.rangeSat.value),
-    subtitle_preset: state.selectedPreset,
-    burn_subtitles: true
-  };
-}
-
-// Load Finished Clips Gallery
+// Load Finished Gallery
 async function loadGallery() {
   try {
     const res = await fetch('/api/clips');
-    const clips = await res.json();
+    if (!res.ok) return;
 
+    const clips = await res.json();
     if (!clips || clips.length === 0) {
       elements.galleryGrid.innerHTML = '';
       elements.galleryEmpty.classList.remove('hidden');
@@ -604,92 +804,74 @@ async function loadGallery() {
 
     clips.forEach(clip => {
       const card = document.createElement('div');
-      card.className = 'glass-panel p-3 glass-panel-hover flex flex-col justify-between space-y-3';
+      card.className = 'glass-panel p-4 space-y-3 glass-panel-hover flex flex-col justify-between';
 
-      const sizeMb = (clip.size / (1024 * 1024)).toFixed(1);
-      const dur = Math.round(clip.duration);
+      const presetName = clip.subtitle_preset || 'Hormozi';
+      const score = clip.virality_score || 85;
 
       card.innerHTML = `
-        <div class="aspect-9-16 bg-black rounded-lg overflow-hidden relative shadow-inner">
-          <video src="${clip.url}" controls playsinline preload="metadata" class="w-full h-full object-cover"></video>
-        </div>
+        <div class="space-y-2">
+          <!-- Video Player -->
+          <div class="w-full bg-black rounded-xl overflow-hidden aspect-9-16 relative border border-white/[0.08] shadow-lg">
+            <video src="${clip.url}" controls class="w-full h-full object-contain" preload="metadata" poster="${clip.thumbnail_url || ''}"></video>
+            <div class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md text-[10px] font-bold text-pink-400 border border-white/10 flex items-center gap-1">
+              <i data-lucide="flame" class="w-3 h-3 text-pink-400"></i> ${score}/100
+            </div>
+            <div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md text-[10px] font-mono text-slate-300 border border-white/10">
+              ${clip.duration}s
+            </div>
+          </div>
 
-        <div class="space-y-1 px-1">
-          <h4 class="text-xs font-bold text-white truncate">${escapeHtml(clip.filename)}</h4>
-          <div class="flex items-center justify-between text-[11px] text-slate-400">
-            <span>${dur}s &bull; ${sizeMb} MB</span>
-            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-indigo-400 font-mono">1080x1920</span>
+          <!-- Metadata -->
+          <div class="space-y-1">
+            <h4 class="text-sm font-bold text-white tracking-tight truncate" title="${clip.title}">${clip.title}</h4>
+            <div class="flex items-center justify-between text-[11px] text-slate-400">
+              <span>Preset: <strong class="text-slate-200 capitalize">${presetName}</strong></span>
+              <span class="text-emerald-400 font-semibold font-mono-numbers">9:16 1080p</span>
+            </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-2 pt-1">
-          <a href="${clip.url}" download="${clip.filename}" class="py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-md flex items-center justify-center space-x-1 transition text-center">
-            <i data-lucide="download" class="w-3.5 h-3.5"></i>
-            <span>Save MP4</span>
-          </a>
-          <button onclick="deleteClip('${clip.filename}')" class="py-1.5 bg-slate-800 hover:bg-rose-900/60 hover:text-rose-300 text-slate-400 text-xs font-semibold rounded-md border border-slate-700 flex items-center justify-center space-x-1 transition">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-            <span>Delete</span>
-          </button>
-        </div>
+        <!-- Download Action Button -->
+        <a href="${clip.url}" download="${clip.title}.mp4" 
+          class="w-full py-2 px-3 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl border border-slate-700 flex items-center justify-center space-x-1.5 transition">
+          <i data-lucide="download" class="w-3.5 h-3.5 text-pink-400"></i>
+          <span>Download 9:16 Video</span>
+        </a>
       `;
 
       elements.galleryGrid.appendChild(card);
     });
 
     if (window.lucide) {
-      lucide.createIcons();
+      lucide.createIcons({ root: elements.galleryGrid });
     }
   } catch (err) {
-    console.error('Failed to load gallery clips:', err);
+    console.error('Failed to load gallery:', err);
   }
 }
 
-window.deleteClip = async function(filename) {
-  if (!confirm(`Delete clip '${filename}'?`)) return;
-  try {
-    await fetch(`/api/clips/${encodeURIComponent(filename)}`, { method: 'DELETE' });
-    loadGallery();
-  } catch (err) {
-    alert('Delete failed');
-  }
-};
-
-// Render Transcript with Search & Clickable Word Highlights
+// Render Timestamped Transcript
 function renderTranscript(segments) {
   elements.transcriptContainer.innerHTML = '';
-
   segments.forEach(seg => {
     const row = document.createElement('div');
-    row.className = 'transcript-row p-2 rounded bg-slate-900/40 hover:bg-slate-800/60 transition flex items-start space-x-3 text-xs';
-
+    row.className = 'transcript-row p-2 rounded-lg hover:bg-slate-900/60 transition flex items-start space-x-2 text-xs';
+    
+    const timeStr = `${seg.start.toFixed(1)}s - ${seg.end.toFixed(1)}s`;
     row.innerHTML = `
-      <span class="font-mono text-indigo-400 text-[11px] shrink-0 pt-0.5 select-none">[${seg.start.toFixed(1)}s - ${seg.end.toFixed(1)}s]</span>
-      <p class="text-slate-300 font-normal">${escapeHtml(seg.text)}</p>
+      <span class="text-cyan-400 font-mono-numbers font-semibold shrink-0 select-none">[${timeStr}]</span>
+      <span class="text-slate-300">${seg.text}</span>
     `;
-
     elements.transcriptContainer.appendChild(row);
   });
 }
 
-function filterTranscript(query) {
-  const rows = document.querySelectorAll('.transcript-row');
-  const q = query.toLowerCase().trim();
-  rows.forEach(row => {
-    if (!q || row.textContent.toLowerCase().includes(q)) {
-      row.classList.remove('hidden');
-    } else {
-      row.classList.add('hidden');
-    }
+// Filter transcript by search input
+function filterTranscript(keyword) {
+  const term = keyword.toLowerCase();
+  document.querySelectorAll('.transcript-row').forEach(row => {
+    const text = row.textContent.toLowerCase();
+    row.style.display = text.includes(term) ? 'flex' : 'none';
   });
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 }

@@ -70,7 +70,7 @@ app.mount("/storage", StaticFiles(directory=str(STORAGE_DIR)), name="storage")
 class IngestUrlRequest(BaseModel):
     url: str
     whisper_model: str = DEFAULT_WHISPER_MODEL
-    clipping_mode: str = "ai_hook"  # "ai_hook" or "sequential"
+    clipping_mode: str = "ai_hook"  # "ai_hook", "sequential", or "live_peaks"
     ollama_model: str = DEFAULT_OLLAMA_MODEL
     min_clip_duration: float = 20.0
     max_clip_duration: float = 60.0
@@ -78,6 +78,7 @@ class IngestUrlRequest(BaseModel):
     sequential_overlap: float = 2.0
     snap_boundaries: bool = True
     auto_render: bool = False
+    is_live_stream: bool = False
     render_options: Optional[Dict[str, Any]] = None
 
 
@@ -200,12 +201,21 @@ async def run_full_pipeline_task(job_id: str, request_data: IngestUrlRequest, so
         )
 
         # 3. Clip Segmentation & Hook Analysis
+        is_live_target = bool(request_data.is_live_stream or video_info.get("is_live_stream") or request_data.clipping_mode == "live_peaks")
+
         if request_data.clipping_mode == "sequential":
             clips = VideoAnalyzer.chunk_sequentially(
                 transcript_data=transcript_data,
                 chunk_duration=request_data.sequential_duration,
                 overlap_seconds=request_data.sequential_overlap,
                 snap_to_boundaries=request_data.snap_boundaries
+            )
+        elif is_live_target or float(transcript_data.get("duration", 0.0)) > 900.0:
+            clips = VideoAnalyzer.analyze_livestream_peaks(
+                transcript_data=transcript_data,
+                min_duration=request_data.min_clip_duration,
+                max_duration=request_data.max_clip_duration,
+                max_clips=8
             )
         else:
             clips = VideoAnalyzer.analyze_viral_hooks_ollama(
@@ -346,7 +356,10 @@ async def run_batch_render_task(
                 "job_id": job_id,
                 "title": c_title,
                 "virality_score": clip.get("virality_score", 85),
+                "hook_type": clip.get("hook_type", "Curiosity Hook"),
                 "reasoning": clip.get("reasoning", ""),
+                "hashtags": clip.get("hashtags", ["#Shorts", "#Viral", "#Fyp"]),
+                "caption_idea": clip.get("caption_idea", ""),
                 "start_time": c_start,
                 "end_time": c_end,
                 "duration": round(c_end - c_start, 2),

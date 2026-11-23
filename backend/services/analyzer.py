@@ -11,14 +11,29 @@ from typing import Dict, Any, List, Optional
 from backend.config import OLLAMA_HOST, DEFAULT_OLLAMA_MODEL, AVAILABLE_OLLAMA_MODELS
 
 
-# Common viral trigger phrases and hook indicators
+# High-retention viral triggers and hook pattern taxonomy
 HOOK_PATTERNS = [
+    # 1. Curiosity Gaps & Secrets
     r"\b(how to|secret to|the reason why|never do this|stop doing|this simple trick|the biggest mistake)\b",
     r"\b(what if|did you know|here is why|most people don't know|the truth about|you won't believe)\b",
     r"\b(watch this|listen to this|number one rule|if you want to|this changed everything)\b",
-    r"\b(step one|first thing|rule number|the best way|unbelievable|mind blowing|crazy)\b",
-    r"\?",  # Questions are natural hooks
+    r"\b(nobody talks about|the dark side of|what they don't tell you|the real reason|unspoken rule)\b",
+    # 2. Provocative & Shock Statements
+    r"\b(step one|first thing|rule number|the best way|unbelievable|mind blowing|crazy|insane)\b",
+    r"\b(waste of time|huge mistake|don't buy|stop buying|don't make this|worst advice|lie)\b",
+    r"\b(guaranteed|instantly|in 30 seconds|in 5 minutes|hack|cheat code|superpower)\b",
+    # 3. Stream & Reaction Spikes (Livestreams & Podcasts)
+    r"\b(wait wait wait|oh my god|holy crap|are you kidding me|no way|look at this|check this out)\b",
+    r"\b(chat listen|bro look|what did he say|i can't believe|game over|clutch|unreal)\b",
+    r"\?",  # Questions are natural psychological hooks
 ]
+
+VIRAL_HASHTAGS_POOL = {
+    "education": ["#learnontiktok", "#edutok", "#tipsandtricks", "#lifehacks", "#didyouknow"],
+    "business": ["#entrepreneur", "#businessmindset", "#success", "#moneytok", "#productivity"],
+    "gaming": ["#gaming", "#gamersoftiktok", "#twitchclips", "#streamer", "#gamingmoments"],
+    "general": ["#viral", "#fyp", "#foryoupage", "#shorts", "#trending", "#reels"]
+}
 
 
 def check_ollama_status(host: str = OLLAMA_HOST) -> Dict[str, Any]:
@@ -99,12 +114,12 @@ class VideoAnalyzer:
         )
 
         user_prompt = f"""
-Analyze this timestamped video transcript and extract the top {max_clips} standalone viral clips.
+Analyze this timestamped video transcript and extract the top {max_clips} standalone viral clips for TikTok, Instagram Reels, and YouTube Shorts.
 
 CONSTRAINTS:
 1. Target clip duration: {min_duration} to {max_duration} seconds.
-2. Must have a strong initial hook in the first 3 seconds (provocative question, shocking statement, high value promise).
-3. Must have a complete coherent narrative or educational payoff.
+2. Must have a strong initial hook in the first 3 seconds (provocative question, shocking statement, high value promise, or curiosity gap).
+3. Must have a complete coherent narrative, practical takeaway, or emotional payoff.
 4. Timestamps MUST be strictly within [0.0s and {total_duration:.1f}s].
 5. Use exact start_time and end_time from the transcript brackets.
 
@@ -116,12 +131,15 @@ Return strictly a valid JSON object matching this schema:
 {{
   "clips": [
     {{
-      "title": "Short Catchy Click-Worthy Title",
+      "title": "Short Catchy Click-Worthy Title (5-8 words)",
       "start_time": 12.4,
       "end_time": 45.2,
-      "virality_score": 92,
-      "hook_sentence": "Opening hook sentence...",
-      "reasoning": "Why this snippet has high retention and virality potential."
+      "virality_score": 94,
+      "hook_type": "Curiosity Gap | Shock Statement | Secret Hack | Story Payoff | Contrarian Truth",
+      "hook_sentence": "Opening hook sentence verbatim...",
+      "reasoning": "Why this snippet has high retention, watch-time, and shareability.",
+      "hashtags": ["#Shorts", "#Viral", "#LifeTips"],
+      "caption_idea": "Compelling caption with call to action..."
     }}
   ]
 }}
@@ -216,15 +234,34 @@ Return strictly a valid JSON object matching this schema:
                 total_score = min(98, int(hook_score + pace_score + ending_bonus))
 
                 title = cls._generate_title_from_text(hook_text, full_clip_text)
+                
+                # Determine hook category
+                hook_lower = hook_text.lower()
+                if "?" in hook_text:
+                    h_type = "Curiosity Question"
+                elif any(w in hook_lower for w in ["never", "stop", "mistake", "lie", "worst"]):
+                    h_type = "Contrarian Truth"
+                elif any(w in hook_lower for w in ["secret", "hack", "trick", "how to", "rule"]):
+                    h_type = "Actionable Secret"
+                elif any(w in hook_lower for w in ["omg", "insane", "crazy", "unbelievable", "wait", "holy"]):
+                    h_type = "High-Energy Reaction"
+                else:
+                    h_type = "Story Payoff"
+
+                tags = ["#Shorts", "#Viral", "#LearnOnTikTok", "#Fyp"]
+                caption = f"{title}! {hook_text[:90].strip()}... Watch till the end 🔥"
 
                 candidates.append({
                     "title": title,
                     "start_time": round(start_time, 2),
                     "end_time": round(end_time, 2),
                     "virality_score": total_score,
+                    "hook_type": h_type,
                     "hook_sentence": hook_text[:120].strip(),
-                    "reasoning": f"Detected high engagement opener with {word_count} spoken words and clear cadence.",
-                    "duration": round(end_time - start_time, 2)
+                    "reasoning": f"Scored {total_score}/100. High-retention {h_type.lower()} with {word_count} spoken words and clear resolution.",
+                    "duration": round(end_time - start_time, 2),
+                    "hashtags": tags,
+                    "caption_idea": caption
                 })
 
         candidates.sort(key=lambda x: x["virality_score"], reverse=True)
@@ -249,6 +286,106 @@ Return strictly a valid JSON object matching this schema:
             )
 
         return selected
+
+    @classmethod
+    def analyze_livestream_peaks(
+        cls,
+        transcript_data: Dict[str, Any],
+        min_duration: float = 20.0,
+        max_duration: float = 60.0,
+        max_clips: int = 6,
+    ) -> List[Dict[str, Any]]:
+        """
+        Specialized peak engagement detector for long live streams and multi-hour broadcasts.
+        Divides the broadcast into sliding time windows and locates the highest energy spikes.
+        """
+        segments = transcript_data.get("segments", [])
+        total_duration = float(transcript_data.get("duration", 0.0))
+
+        if not segments or total_duration <= 0:
+            return []
+
+        # If stream is short (< 15 mins), standard viral hook analyzer is sufficient
+        if total_duration < 900.0:
+            return cls.analyze_viral_hooks_heuristic(
+                transcript_data, min_duration=min_duration, max_duration=max_duration, max_clips=max_clips
+            )
+
+        # 1. Slide a 90-second window across the stream to identify energy & speech density spikes
+        window_size = 90.0
+        step_size = 45.0
+        windows = []
+
+        t = 0.0
+        while t < total_duration - 30.0:
+            w_end = min(total_duration, t + window_size)
+            # Find segments in window
+            w_segs = [s for s in segments if s.get("start", 0) >= t and s.get("end", 0) <= w_end]
+            if w_segs:
+                full_text = " ".join([s.get("text", "") for s in w_segs])
+                words = full_text.split()
+                w_count = len(words)
+                
+                # Energy indicators
+                w_rate = w_count / max(1.0, w_end - t) # words per second
+                exclamations = full_text.count("!") + full_text.count("?")
+                reactions = len(re.findall(r"\b(crazy|insane|win|fail|omg|holy|no way|look|chat|bro|what|unbelievable)\b", full_text, re.I))
+                
+                energy_score = (w_rate * 20.0) + (exclamations * 5.0) + (reactions * 12.0)
+                windows.append({
+                    "start": t,
+                    "end": w_end,
+                    "energy": energy_score,
+                    "segments": w_segs,
+                    "full_text": full_text
+                })
+            t += step_size
+
+        windows.sort(key=lambda x: x["energy"], reverse=True)
+
+        # Select top non-overlapping peaks distributed across the stream
+        selected_peaks = []
+        for w in windows:
+            too_close = False
+            for sp in selected_peaks:
+                if abs(w["start"] - sp["start"]) < 180.0: # at least 3 minutes apart
+                    too_close = True
+                    break
+            if not too_close:
+                selected_peaks.append(w)
+            if len(selected_peaks) >= max_clips:
+                break
+
+        # For each peak, extract the best tight clip within [min_duration, max_duration]
+        clips = []
+        for i, peak in enumerate(selected_peaks):
+            peak_sub_data = {
+                "segments": peak["segments"],
+                "duration": peak["end"] - peak["start"]
+            }
+            sub_clips = cls.analyze_viral_hooks_heuristic(
+                peak_sub_data, min_duration=min_duration, max_duration=max_duration, max_clips=1
+            )
+            if sub_clips:
+                clip = sub_clips[0]
+                mins = int(clip["start_time"] // 60)
+                secs = int(clip["start_time"] % 60)
+                hrs = int(mins // 60)
+                mins = mins % 60
+                ts_str = f"{hrs:02d}:{mins:02d}:{secs:02d}" if hrs > 0 else f"{mins:02d}:{secs:02d}"
+
+                clip["title"] = f"Live Peak [{ts_str}]: {clip['title']}"
+                clip["is_livestream_peak"] = True
+                clip["stream_timestamp_str"] = ts_str
+                clip["reasoning"] = f"Live stream climax at {ts_str} with intense speech rate and audience engagement spike."
+                clips.append(clip)
+
+        if not clips:
+            return cls.analyze_viral_hooks_heuristic(
+                transcript_data, min_duration=min_duration, max_duration=max_duration, max_clips=max_clips
+            )
+
+        return clips
 
     @classmethod
     def chunk_sequentially(
@@ -387,9 +524,12 @@ Return strictly a valid JSON object matching this schema:
                     "start_time": round(start, 2),
                     "end_time": round(end, 2),
                     "virality_score": int(clip.get("virality_score", 85)),
+                    "hook_type": clip.get("hook_type", "Curiosity Gap"),
                     "hook_sentence": clip.get("hook_sentence", ""),
                     "reasoning": clip.get("reasoning", "Selected by AI Viral Hook Analyzer."),
-                    "duration": round(end - start, 2)
+                    "duration": round(end - start, 2),
+                    "hashtags": clip.get("hashtags", ["#Shorts", "#Viral", "#Fyp"]),
+                    "caption_idea": clip.get("caption_idea", f"{clip.get('title', 'Check this out')} 🔥 Watch until the end!")
                 })
             except Exception:
                 continue
