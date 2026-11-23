@@ -1,110 +1,102 @@
-/* AutoClip Studio Pro - High-End SaaS Video Repurposing Studio */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Anton&family=Space+Grotesk:wght@600;700;800&display=swap');
+/* AutoClip Studio - Clean Executive SaaS Design System */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Anton&family=Space+Grotesk:wght@600;700&display=swap');
 
-/* ==========================================
-   Design Tokens & Color Architecture
-   ========================================== */
+/* ==========================================================================
+   Design Tokens & CSS Variables (Dual-Theme: Light & Dark)
+   ========================================================================== */
 :root {
-  --color-primary: #ec4899;
-  --color-primary-glow: rgba(236, 72, 153, 0.35);
-  --color-indigo: #6366f1;
-  --color-indigo-glow: rgba(99, 102, 241, 0.35);
-  --color-cyan: #06b6d4;
+  --color-primary: #6366f1;
+  --color-primary-hover: #4f46e5;
+  --color-primary-subtle: rgba(99, 102, 241, 0.12);
   --color-emerald: #10b981;
   --color-amber: #f59e0b;
-  --color-rose: #f43f5e;
+  --color-rose: #ef4444;
 
-  /* Default Dark Mode Theme */
+  /* Dark Theme (Default: Obsidian Graphite / Executive Modern) */
   --bg-app: #090d16;
-  --bg-card: rgba(19, 27, 46, 0.78);
-  --bg-card-solid: #111827;
-  --bg-card-inner: rgba(9, 13, 22, 0.85);
-  --border-card: rgba(255, 255, 255, 0.08);
-  --border-card-hover: rgba(236, 72, 153, 0.45);
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --text-faint: #64748b;
-  --header-bg: rgba(9, 13, 22, 0.85);
+  --bg-card: #121826;
+  --bg-card-hover: #182032;
+  --bg-card-inner: #0d131f;
+  --header-bg: rgba(9, 13, 22, 0.88);
   --header-border: rgba(255, 255, 255, 0.08);
-  --phone-bezel: #1e293b;
-  --phone-screen: #000000;
-  --shadow-panel: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
-  --input-bg: rgba(9, 13, 22, 0.9);
-  --input-border: #1e293b;
+  --border-card: rgba(255, 255, 255, 0.08);
+  --border-card-hover: rgba(99, 102, 241, 0.4);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --input-bg: #0d131f;
+  --input-border: #1f293d;
+  --phone-bezel: #161e2e;
+  --phone-outer-border: rgba(255, 255, 255, 0.12);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --shadow-mockup: 0 24px 48px -12px rgba(0, 0, 0, 0.55);
+  --range-track: #1e293b;
 }
 
-/* Light Mode Overrides */
+/* Light Theme (Executive Clean Studio: Crisp White / Slate) */
 html.light {
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-primary-subtle: rgba(79, 70, 229, 0.08);
   --bg-app: #f8fafc;
-  --bg-card: rgba(255, 255, 255, 0.95);
-  --bg-card-solid: #ffffff;
-  --bg-card-inner: #f1f5f9;
-  --border-card: #e2e8f0;
-  --border-card-hover: rgba(236, 72, 153, 0.6);
-  --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
-  --text-faint: #94a3b8;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --bg-card-inner: #f8fafc;
   --header-bg: rgba(255, 255, 255, 0.92);
   --header-border: #e2e8f0;
-  --phone-bezel: #0f172a;
-  --phone-screen: #000000;
-  --shadow-panel: 0 10px 30px -10px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+  --border-card: #e2e8f0;
+  --border-card-hover: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
   --input-bg: #ffffff;
   --input-border: #cbd5e1;
+  --phone-bezel: #e2e8f0;
+  --phone-outer-border: #cbd5e1;
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+  --shadow-mockup: 0 20px 40px -10px rgba(0, 0, 0, 0.12);
+  --range-track: #e2e8f0;
 }
 
-/* Global Body Styling */
+/* Base Body */
 body {
   background-color: var(--bg-app);
   color: var(--text-primary);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  transition: background-color 0.25s ease, color 0.25s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
-html.dark body {
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 45%),
-    radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.10) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(6, 182, 212, 0.08) 0px, transparent 60%);
-  background-attachment: fixed;
-}
-
-html.light body {
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 45%),
-    radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.06) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(6, 182, 212, 0.05) 0px, transparent 60%);
-  background-attachment: fixed;
-}
-
-/* ==========================================
-   Glass Panels & Cards
-   ========================================== */
+/* Clean Panels */
 .glass-panel {
   background: var(--bg-card);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-card);
-  border-radius: 1.25rem;
-  box-shadow: var(--shadow-panel);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
 .glass-panel-hover:hover {
   border-color: var(--border-card-hover);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
-  transform: translateY(-2px);
 }
 
-/* Header Styles */
+.bg-card {
+  background-color: var(--bg-card) !important;
+}
+.bg-card-inner {
+  background-color: var(--bg-card-inner) !important;
+}
+.border-card {
+  border-color: var(--border-card) !important;
+}
+
+/* Header */
 header.studio-header {
   background: var(--header-bg);
   border-bottom: 1px solid var(--header-border);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 /* Custom Scrollbars */
@@ -117,124 +109,218 @@ header.studio-header {
 }
 html.dark ::-webkit-scrollbar-thumb {
   background: #1e293b;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 html.light ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
-/* Phone Mockup Frame */
+/* ==========================================================================
+   Clean Smartphone Bezel Mockup
+   ========================================================================== */
 .phone-mockup-outer {
   position: relative;
   background: var(--phone-bezel);
-  border: 4px solid rgba(255, 255, 255, 0.12);
+  border: 3px solid var(--phone-outer-border);
   border-radius: 36px;
-  padding: 8px;
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.3);
-  transition: all 0.25s ease;
+  padding: 6px;
+  box-shadow: var(--shadow-mockup);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .phone-screen-inner {
   position: relative;
   width: 100%;
   height: 100%;
-  border-radius: 26px;
-  background: #000;
+  border-radius: 28px;
+  background: #000000;
   overflow: hidden;
 }
 
-/* Dynamic Island / Notch Pill */
 .phone-island {
   position: absolute;
-  top: 8px;
+  top: 7px;
   left: 50%;
   transform: translateX(-50%);
-  width: 76px;
-  height: 18px;
+  width: 64px;
+  height: 14px;
   background: #000000;
-  border-radius: 12px;
+  border-radius: 8px;
   z-index: 30;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  gap: 4px;
 }
 .phone-island-cam {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: #1e293b;
 }
 
-/* Input Fields */
+/* ==========================================================================
+   Form Controls, Inputs, & Buttons
+   ========================================================================== */
 input[type="text"],
 input[type="number"],
 select {
   background-color: var(--input-bg) !important;
-  border-color: var(--input-border) !important;
+  border: 1px solid var(--input-border) !important;
   color: var(--text-primary) !important;
-  transition: all 0.18s ease;
+  border-radius: 8px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 input[type="text"]:focus,
 input[type="number"]:focus,
 select:focus {
   border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.15);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-primary-subtle);
 }
 
-/* Range Sliders */
+/* Range Sliders: Clean, Subtle, No Pink/Cyberpunk */
 input[type="range"] {
-  accent-color: var(--color-primary);
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
   height: 6px;
-  border-radius: 3px;
+  border-radius: 9999px;
+  background: var(--range-track);
+  outline: none;
   cursor: pointer;
+  margin: 6px 0;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s ease;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-/* Subtitle Preview Text */
+/* ==========================================================================
+   Interactive Component States (Tabs, Ratios, Presets)
+   ========================================================================== */
+.ratio-btn {
+  border: 1px solid var(--border-card);
+  background: var(--bg-card-inner);
+  transition: all 0.15s ease;
+}
+.ratio-btn:hover {
+  border-color: var(--border-card-hover);
+}
+.ratio-btn.active {
+  border-color: var(--color-primary) !important;
+  background-color: var(--color-primary-subtle) !important;
+}
+
+.preset-btn {
+  border: 1px solid var(--border-card);
+  background: var(--bg-card-inner);
+  transition: all 0.15s ease;
+}
+.preset-btn:hover {
+  border-color: var(--border-card-hover);
+}
+.preset-btn.active {
+  border-color: var(--color-primary) !important;
+  background-color: var(--color-primary-subtle) !important;
+}
+
+/* Active Tab */
+.tab-active {
+  background-color: var(--color-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+.tab-inactive {
+  background-color: transparent !important;
+  color: var(--text-muted) !important;
+}
+.tab-inactive:hover {
+  color: var(--text-primary) !important;
+}
+
+/* Pipeline Step States */
+.step-idle {
+  background: var(--bg-card-inner);
+  border: 1px solid var(--border-card);
+  color: var(--text-muted);
+}
+.step-active {
+  background: var(--color-primary-subtle) !important;
+  border: 1px solid var(--color-primary) !important;
+  color: var(--color-primary) !important;
+  font-weight: 600;
+}
+.step-done {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+  color: var(--color-emerald) !important;
+  font-weight: 600;
+}
+
+/* Subtitle Preview Typographies */
 .sub-hormozi {
   font-family: 'Anton', Impact, sans-serif;
   text-transform: uppercase;
   color: #FFFFFF;
-  text-shadow: 0 3px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 4px 12px rgba(0,0,0,0.8);
+  text-shadow: 0 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 3px 8px rgba(0,0,0,0.7);
 }
 .sub-beast {
   font-family: 'Anton', Impact, sans-serif;
   text-transform: uppercase;
   color: #FFFFFF;
-  text-shadow: 0 4px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, 0 5px 15px rgba(0,0,0,0.9);
+  text-shadow: 0 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, 0 4px 10px rgba(0,0,0,0.8);
 }
 .sub-tiktok {
   font-family: 'Space Grotesk', sans-serif;
-  font-weight: 800;
-  color: #FFFFFF;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.7);
-}
-.sub-neon {
-  font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
+  color: #FFFFFF;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.7);
+}
+.sub-cyberpunk {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
   text-transform: uppercase;
   color: #FFFFFF;
-  text-shadow: 0 0 10px #36E3FF, 0 0 20px #36E3FF;
+  text-shadow: 0 0 8px #38BDF8;
 }
 .sub-luxury {
   font-family: 'Georgia', serif;
   font-style: italic;
   color: #FFFFFF;
-  text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
 }
-.sub-clean {
+.sub-clean_minimal {
   font-family: 'Inter', sans-serif;
   font-weight: 600;
   color: #FFFFFF;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
 
 /* Toast Notifications */
 #toast-container {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 20px;
+  right: 20px;
   z-index: 9999;
   display: flex;
   flex-direction: column;
@@ -243,36 +329,25 @@ input[type="range"] {
 }
 .toast {
   pointer-events: auto;
-  background: var(--bg-card-solid);
+  background: var(--bg-card);
   border: 1px solid var(--border-card);
-  padding: 12px 18px;
-  border-radius: 12px;
+  padding: 10px 16px;
+  border-radius: 10px;
   color: var(--text-primary);
   font-size: 13px;
   font-weight: 500;
-  box-shadow: 0 16px 36px rgba(0,0,0,0.3);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
   display: flex;
   align-items: center;
   gap: 10px;
-  animation: toastSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: toastIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-@keyframes toastSlide {
-  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Animated Shimmer Button */
-@keyframes shimmerPulse {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-.shimmer-btn {
-  background-size: 200% 200%;
-  animation: shimmerPulse 3.5s ease infinite;
-}
-
-/* Monospace numbers helper */
+/* Monospace Numbers */
 .font-mono-numbers {
   font-family: 'JetBrains Mono', monospace;
   font-variant-numeric: tabular-nums;

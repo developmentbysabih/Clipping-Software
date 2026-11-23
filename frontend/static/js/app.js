@@ -336,12 +336,14 @@ function initEventListeners() {
       state.aspectRatio = ratio;
       
       document.querySelectorAll('.ratio-btn').forEach(b => {
-        b.className = 'ratio-btn p-2 rounded-xl border border-slate-800 bg-slate-950/60 text-center hover:border-slate-700 transition-all cursor-pointer';
-        b.querySelector('.text-xs').className = 'text-xs font-bold text-slate-300';
+        b.classList.remove('active');
+        const num = b.querySelector('.ratio-num');
+        if (num) num.className = 'ratio-num text-xs font-semibold text-slate-500 dark:text-slate-400';
       });
 
-      target.className = 'ratio-btn p-2 rounded-xl border border-pink-500 bg-pink-950/30 text-center transition-all cursor-pointer';
-      target.querySelector('.text-xs').className = 'text-xs font-bold text-white';
+      target.classList.add('active');
+      const activeNum = target.querySelector('.ratio-num');
+      if (activeNum) activeNum.className = 'ratio-num text-xs font-semibold text-slate-900 dark:text-white';
 
       const dimMap = {
         '9:16': '9:16 (1080x1920)',
@@ -392,16 +394,16 @@ function initEventListeners() {
 
   elements.dropzone.addEventListener('dragover', (e) => {
     e.preventDefault();
-    elements.dropzone.classList.add('border-pink-500', 'bg-pink-950/20');
+    elements.dropzone.classList.add('border-indigo-500', 'bg-indigo-500/10');
   });
 
   elements.dropzone.addEventListener('dragleave', () => {
-    elements.dropzone.classList.remove('border-pink-500', 'bg-pink-950/20');
+    elements.dropzone.classList.remove('border-indigo-500', 'bg-indigo-500/10');
   });
 
   elements.dropzone.addEventListener('drop', (e) => {
     e.preventDefault();
-    elements.dropzone.classList.remove('border-pink-500', 'bg-pink-950/20');
+    elements.dropzone.classList.remove('border-indigo-500', 'bg-indigo-500/10');
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileSelected(e.dataTransfer.files[0]);
     }
@@ -521,22 +523,22 @@ function switchTab(tab) {
   state.activeTab = tab;
   
   // Reset tabs
-  elements.tabBtnUrl.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer';
-  elements.tabBtnLive.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer';
-  elements.tabBtnUpload.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer';
+  [elements.tabBtnUrl, elements.tabBtnLive, elements.tabBtnUpload].forEach(btn => {
+    btn.className = 'tab-inactive px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 cursor-pointer';
+  });
   
   elements.tabContentUrl.classList.add('hidden');
   elements.tabContentLive.classList.add('hidden');
   elements.tabContentUpload.classList.add('hidden');
 
   if (tab === 'url') {
-    elements.tabBtnUrl.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-pink-600 text-white shadow-md shadow-pink-600/30 transition-all flex items-center gap-1.5 cursor-pointer';
+    elements.tabBtnUrl.className = 'tab-active px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 cursor-pointer';
     elements.tabContentUrl.classList.remove('hidden');
   } else if (tab === 'live') {
-    elements.tabBtnLive.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-600 text-white shadow-md shadow-rose-600/30 transition-all flex items-center gap-1.5 cursor-pointer';
+    elements.tabBtnLive.className = 'tab-active px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 cursor-pointer';
     elements.tabContentLive.classList.remove('hidden');
   } else {
-    elements.tabBtnUpload.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-pink-600 text-white shadow-md shadow-pink-600/30 transition-all flex items-center gap-1.5 cursor-pointer';
+    elements.tabBtnUpload.className = 'tab-active px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 cursor-pointer';
     elements.tabContentUpload.classList.remove('hidden');
   }
 }
@@ -553,12 +555,12 @@ function selectSubtitlePreset(preset) {
   state.selectedPreset = preset;
 
   document.querySelectorAll('.preset-btn').forEach(b => {
-    b.className = 'preset-btn p-2 rounded-xl border border-slate-800 bg-slate-950/60 text-left hover:border-slate-700 transition-all cursor-pointer';
+    b.classList.remove('active');
   });
 
   const activeBtn = document.querySelector(`.preset-btn[data-preset="${preset}"]`);
   if (activeBtn) {
-    activeBtn.className = 'preset-btn p-2 rounded-xl border border-pink-500 bg-pink-950/30 text-left transition-all cursor-pointer';
+    activeBtn.classList.add('active');
   }
 
   // Update Preview Mockup
@@ -569,13 +571,13 @@ function selectSubtitlePreset(preset) {
   } else if (preset === 'beast') {
     elements.mockupActiveWord.className = 'text-emerald-400 scale-105 inline-block';
   } else if (preset === 'tiktok_bounce') {
-    elements.mockupActiveWord.className = 'text-pink-500 scale-110 inline-block';
+    elements.mockupActiveWord.className = 'text-indigo-400 scale-105 inline-block';
   } else if (preset === 'cyberpunk') {
     elements.mockupActiveWord.className = 'text-cyan-400 scale-105 inline-block';
   } else if (preset === 'luxury') {
     elements.mockupActiveWord.className = 'text-amber-300 scale-105 inline-block italic';
   } else {
-    elements.mockupActiveWord.className = 'text-sky-400 inline-block font-semibold';
+    elements.mockupActiveWord.className = 'text-slate-100 dark:text-white inline-block font-semibold';
   }
 }
 
@@ -731,11 +733,11 @@ function updateProgressUI(job) {
 
   // Reset Step Indicators
   [elements.stepIngest, elements.stepTranscribe, elements.stepAnalyze, elements.stepRender].forEach(el => {
-    el.className = 'p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-500 font-semibold transition-all';
+    el.className = 'step-idle p-2 rounded-lg text-center font-mono-numbers text-[11px] transition-all';
   });
 
-  const activeClass = 'p-2.5 rounded-xl bg-pink-950/30 border border-pink-500 text-pink-400 font-bold glow-active';
-  const doneClass = 'p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-500/50 text-emerald-400 font-bold';
+  const activeClass = 'step-active p-2 rounded-lg text-center font-mono-numbers text-[11px] transition-all';
+  const doneClass = 'step-done p-2 rounded-lg text-center font-mono-numbers text-[11px] transition-all';
 
   if (['ingestion', 'downloading'].includes(job.stage)) {
     elements.stepIngest.className = activeClass;
@@ -818,36 +820,36 @@ function renderCandidateClips(clips, jobId) {
         </div>
 
         <!-- Title -->
-        <h3 class="text-base font-bold text-primary tracking-tight">${clip.title}</h3>
+        <h3 class="text-base font-bold text-slate-900 dark:text-white tracking-tight">${clip.title}</h3>
 
         <!-- Verbatim Hook Quote Pill -->
         ${clip.hook_sentence ? `
-          <div class="p-3 bg-card-inner rounded-xl border border-card text-xs text-secondary italic flex items-start gap-2">
-            <i data-lucide="quote" class="w-3.5 h-3.5 text-pink-500 shrink-0 mt-0.5"></i>
+          <div class="p-3 bg-card-inner rounded-xl border border-card text-xs text-slate-700 dark:text-slate-300 italic flex items-start gap-2">
+            <i data-lucide="quote" class="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5"></i>
             <span>"${clip.hook_sentence}"</span>
           </div>
         ` : ''}
 
         <!-- AI Viral Reasoning -->
-        <p class="text-xs text-muted leading-relaxed">${clip.reasoning || 'Selected for maximum viewer watch-time retention.'}</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">${clip.reasoning || 'Selected for maximum viewer watch-time retention.'}</p>
         
         <!-- Social Caption Snippet -->
         <div class="p-2.5 bg-card-inner rounded-xl border border-card space-y-1.5">
-          <div class="flex items-center justify-between text-[10px] text-muted">
-            <span class="font-semibold text-secondary flex items-center gap-1">
-              <i data-lucide="share-2" class="w-3 h-3 text-cyan-500"></i> Social Caption & Hashtags
+          <div class="flex items-center justify-between text-[10px] text-slate-500">
+            <span class="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+              <i data-lucide="share-2" class="w-3 h-3 text-indigo-500"></i> Social Caption & Hashtags
             </span>
-            <button class="btn-copy-caption text-pink-500 hover:text-pink-400 font-semibold cursor-pointer">
+            <button class="btn-copy-caption text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 font-semibold cursor-pointer">
               Copy Caption
             </button>
           </div>
-          <p class="text-[11px] text-muted line-clamp-2">${captionIdea}</p>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">${captionIdea}</p>
         </div>
       </div>
 
       <!-- Card Action Footer -->
       <div class="pt-3 border-t border-card flex items-center justify-between gap-2">
-        <select class="clip-sub-preset rounded-lg px-2 py-1 text-xs text-primary">
+        <select class="clip-sub-preset rounded-lg px-2 py-1 text-xs text-slate-800 dark:text-slate-200">
           <option value="hormozi" ${state.selectedPreset === 'hormozi' ? 'selected' : ''}>Hormozi</option>
           <option value="beast" ${state.selectedPreset === 'beast' ? 'selected' : ''}>Beast</option>
           <option value="tiktok_bounce" ${state.selectedPreset === 'tiktok_bounce' ? 'selected' : ''}>TikTok Pop</option>
@@ -856,7 +858,7 @@ function renderCandidateClips(clips, jobId) {
           <option value="clean_minimal" ${state.selectedPreset === 'clean_minimal' ? 'selected' : ''}>Minimal</option>
         </select>
 
-        <button class="btn-render-single flex-1 py-1.5 px-3 bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold rounded-lg shadow-md shadow-pink-600/25 flex items-center justify-center space-x-1.5 transition cursor-pointer">
+        <button class="btn-render-single flex-1 py-1.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center justify-center space-x-1.5 transition cursor-pointer">
           <i data-lucide="film" class="w-3.5 h-3.5"></i>
           <span>Render 9:16 Clip</span>
         </button>
@@ -982,8 +984,8 @@ async function loadGallery() {
           <!-- Video Player -->
           <div class="w-full bg-black rounded-xl overflow-hidden aspect-9-16 relative border border-white/[0.08] shadow-lg">
             <video src="${clip.url}" controls class="w-full h-full object-contain" preload="metadata" poster="${clip.thumbnail_url || ''}"></video>
-            <div class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md text-[10px] font-bold text-pink-400 border border-white/10 flex items-center gap-1">
-              <i data-lucide="flame" class="w-3 h-3 text-pink-400"></i> ${score}/100
+            <div class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md text-[10px] font-bold text-amber-400 border border-white/10 flex items-center gap-1">
+              <i data-lucide="flame" class="w-3 h-3 text-amber-400"></i> ${score}/100
             </div>
             <div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md text-[10px] font-mono text-slate-300 border border-white/10">
               ${clip.duration}s
@@ -992,9 +994,9 @@ async function loadGallery() {
 
           <!-- Metadata -->
           <div class="space-y-1">
-            <h4 class="text-sm font-bold text-primary tracking-tight truncate" title="${clip.title}">${clip.title}</h4>
-            <div class="flex items-center justify-between text-[11px] text-muted">
-              <span>Preset: <strong class="text-secondary capitalize">${presetName}</strong></span>
+            <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight truncate" title="${clip.title}">${clip.title}</h4>
+            <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+              <span>Preset: <strong class="text-slate-700 dark:text-slate-300 capitalize">${presetName}</strong></span>
               <span class="text-emerald-500 font-semibold font-mono-numbers">9:16 1080p</span>
             </div>
           </div>
@@ -1002,8 +1004,8 @@ async function loadGallery() {
 
         <!-- Download Action Button -->
         <a href="${clip.url}" download="${clip.title}.mp4" 
-          class="w-full py-2 px-3 bg-card-inner hover:bg-card-hover text-primary text-xs font-semibold rounded-xl border border-card flex items-center justify-center space-x-1.5 transition">
-          <i data-lucide="download" class="w-3.5 h-3.5 text-pink-500"></i>
+          class="w-full py-2 px-3 bg-card-inner hover:bg-card-hover text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl border border-card hover:border-indigo-500/40 flex items-center justify-center space-x-1.5 transition">
+          <i data-lucide="download" class="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400"></i>
           <span>Download 9:16 Video</span>
         </a>
       `;
